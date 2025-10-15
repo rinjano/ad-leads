@@ -42,12 +42,26 @@ model User {
 
 // Layanan (Service) model
 model Layanan {
-  id        Int      @id @default(autoincrement())
-  nama      String   @unique // Nama layanan (e.g., "Konsultasi Medis", "Medical Check-up")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        Int       @id @default(autoincrement())
+  nama      String    @unique // Nama layanan (e.g., "Konsultasi Medis", "Medical Check-up")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  produk    Produk[]  // Relasi one-to-many dengan Produk
 
   @@map("layanan")
+}
+
+// Produk (Product) model
+model Produk {
+  id         Int      @id @default(autoincrement())
+  nama       String   // Nama produk
+  deskripsi  String?  // Deskripsi produk (optional)
+  layananId  Int      // Foreign key ke Layanan
+  layanan    Layanan  @relation(fields: [layananId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("produk")
 }
 
 // Kode Ads model
