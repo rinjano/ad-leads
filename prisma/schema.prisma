@@ -27,14 +27,15 @@ enum UserRole {
 
 // User model for authentication
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String   // Hashed password
-  name      String
-  companyId Int?     // Optional company ID
-  role      UserRole @default(user)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         Int               @id @default(autoincrement())
+  email      String            @unique
+  password   String            // Hashed password
+  name       String
+  companyId  Int?              // Optional company ID
+  role       UserRole          @default(user)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+  userKodeAds UserKodeAds[]    // Relasi many-to-many dengan KodeAds untuk advertiser
 
   @@map("users")
 }
@@ -51,13 +52,27 @@ model Layanan {
 
 // Kode Ads model
 model KodeAds {
-  id        Int      @id @default(autoincrement())
-  kode      String   @unique // Kode ads (e.g., "ADS001", "FB-ADS-2024")
-  status    String   @default("aktif") // Status: "aktif" atau "nonaktif"
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          Int            @id @default(autoincrement())
+  kode        String         @unique // Kode ads (e.g., "ADS001", "FB-ADS-2024")
+  status      String         @default("aktif") // Status: "aktif" atau "nonaktif"
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  userKodeAds UserKodeAds[]  // Relasi many-to-many dengan User
 
   @@map("kode_ads")
+}
+
+// Junction table untuk relasi many-to-many User dan KodeAds
+model UserKodeAds {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  kodeAdsId Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kodeAds   KodeAds  @relation(fields: [kodeAdsId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, kodeAdsId])
+  @@map("user_kode_ads")
 }
 
 // Sumber Leads (Lead Source) model

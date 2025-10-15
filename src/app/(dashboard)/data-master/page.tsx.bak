@@ -161,6 +161,687 @@ const checkDataUsage = (type, id) => {
 	}
 };
 
+	function handleSubmit(e) {
+		e.preventDefault();
+		const newErrors = { namaLengkap: "", email: "", password: "", role: "" };
+		if (!form.namaLengkap) newErrors.namaLengkap = "Nama Lengkap wajib diisi.";
+		if (!form.email) newErrors.email = "E-mail wajib diisi.";
+		else if (!/^\S+@\S+\.\S+$/.test(form.email)) newErrors.email = "Format e-mail tidak valid.";
+		if (!form.password) newErrors.password = "Password wajib diisi.";
+		if (!form.role) newErrors.role = "Role wajib dipilih.";
+		setErrors(newErrors);
+		if (!newErrors.namaLengkap && !newErrors.email && !newErrors.password && !newErrors.role) {
+			// Add new user to the list
+			const newUser = {
+				id: usersList.length + 1,
+				name: form.namaLengkap,
+				email: form.email,
+				role: form.role,
+				createdAt: new Date().toISOString().split('T')[0]
+			};
+			setUsersList([...usersList, newUser]);
+			
+			// Show notification
+			showNotification("Data User berhasil ditambahkan.", "success");
+			
+			// Reset form and close modal
+			setForm({ namaLengkap: "", email: "", password: "", role: "" });
+			setErrors({ namaLengkap: "", email: "", password: "", role: "" });
+			setShowModal(false);
+		}
+	}
+
+	// Notification function
+	const showNotification = (message, type = "success") => {
+		setNotification({ message, type });
+		
+		// Auto-hide after 3 seconds
+		setTimeout(() => {
+			setNotification(null);
+		}, 3000);
+	};
+
+	// Delete confirmation modal functions
+	const openDeleteModal = (user) => {
+		setUserToDelete(user);
+		setShowDeleteModal(true);
+	};
+
+	const closeDeleteModal = () => {
+		setShowDeleteModal(false);
+		setUserToDelete(null);
+	};
+
+	const handleDeleteUser = () => {
+		if (userToDelete) {
+			// Backend validation: Check if user is still being used
+			const isUsed = checkDataUsage('user', userToDelete.id);
+			if (isUsed) {
+				showNotification("Data user tidak dapat dihapus karena masih memiliki transaksi atau leads.", "error");
+				closeDeleteModal();
+				return;
+			}
+			
+			// Remove the user from the list
+			setUsersList(prevUsers => 
+				prevUsers.filter(user => user.id !== userToDelete.id)
+			);
+			
+			// Close the modal
+			closeDeleteModal();
+			
+			// Show delete notification
+			showNotification("Data User berhasil dihapus.", "success");
+		}
+	};
+
+	// Edit modal functions
+	const openEditModal = (user) => {
+		setEditingUser(user);
+		setEditForm({
+			namaLengkap: user.name,
+			email: user.email,
+			role: user.role
+		});
+		setEditErrors({ namaLengkap: "", email: "", role: "" });
+		setShowEditModal(true);
+	};
+
+	const closeEditModal = () => {
+		setShowEditModal(false);
+		setEditingUser(null);
+		setEditForm({ namaLengkap: "", email: "", role: "" });
+		setEditErrors({ namaLengkap: "", email: "", role: "" });
+	};
+
+	const handleEditSubmit = (e) => {
+		e.preventDefault();
+		const newErrors = { namaLengkap: "", email: "", role: "" };
+		if (!editForm.namaLengkap) newErrors.namaLengkap = "Nama Lengkap wajib diisi.";
+		if (!editForm.email) newErrors.email = "E-mail wajib diisi.";
+		else if (!/^\S+@\S+\.\S+$/.test(editForm.email)) newErrors.email = "Format e-mail tidak valid.";
+		if (!editForm.role) newErrors.role = "Role wajib dipilih.";
+		setEditErrors(newErrors);
+		
+		if (!newErrors.namaLengkap && !newErrors.email && !newErrors.role) {
+			// Backend validation: Check if user is still being used
+			const isUsed = checkDataUsage('user', editingUser.id);
+			if (isUsed) {
+				setEditErrors({ ...newErrors, namaLengkap: "Data user tidak dapat diubah karena masih memiliki transaksi atau leads." });
+				return;
+			}
+			
+			// Update user in the list
+			setUsersList(prevUsers => 
+				prevUsers.map(user => 
+					user.id === editingUser.id 
+						? { ...user, name: editForm.namaLengkap, email: editForm.email, role: editForm.role }
+						: user
+				)
+			);
+			
+			// Show notification
+			showNotification("Data User berhasil diperbarui.", "success");
+			
+			// Close modal
+			closeEditModal();
+		}
+	};
+
+	const getRoleBadgeColor = (role) => {
+		switch (role) {
+			case "Super Admin": return "bg-red-100 text-red-800";
+			case "CS Support": return "bg-green-100 text-green-800";
+			case "CS Representative": return "bg-blue-100 text-blue-800";
+			case "Advertiser": return "bg-purple-100 text-purple-800";
+			case "Retention": return "bg-orange-100 text-orange-800";
+			default: return "bg-gray-100 text-gray-800";
+		}
+	};
+
+	return (
+		<div className="space-y-6">
+			<div className="flex items-center justify-between">
+				<div className="relative max-w-sm">
+					<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+					<Input
+						type="text"
+						placeholder="Cari user..."
+						value={searchTerm}
+						onChange={(e) => setSearchTerm(e.target.value)}
+						className="pl-10 bg-slate-50 border-slate-200 h-10 w-full focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+					/>
+				</div>
+				<Button 
+					className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white" 
+					onClick={() => setShowModal(true)}
+				>
+					<PlusCircle className="h-4 w-4 mr-2" />
+					Tambah User
+				</Button>
+			</div>
+
+			{showModal && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50">
+					<div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
+						<h3 className="text-xl font-bold mb-6 text-gray-800">Tambah User Baru</h3>
+						<form className="space-y-4" onSubmit={handleSubmit} noValidate>
+							<div>
+								<label className="block text-sm font-medium mb-1 text-gray-700">Nama Lengkap <span className="text-red-500">*</span></label>
+								<Input 
+									type="text" 
+									placeholder="Masukkan nama lengkap" 
+									value={form.namaLengkap} 
+									onChange={e => setForm({ ...form, namaLengkap: e.target.value })} 
+									className="border-gray-300 focus:border-blue-500"
+								/>
+								{errors.namaLengkap && <p className="text-xs text-red-500 mt-1">{errors.namaLengkap}</p>}
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1 text-gray-700">E-mail <span className="text-red-500">*</span></label>
+								<Input 
+									type="email" 
+									placeholder="Masukkan alamat email" 
+									value={form.email} 
+									onChange={e => setForm({ ...form, email: e.target.value })} 
+									className="border-gray-300 focus:border-blue-500"
+								/>
+								{errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1 text-gray-700">Password <span className="text-red-500">*</span></label>
+								<Input 
+									type="password" 
+									placeholder="Masukkan password" 
+									value={form.password} 
+									onChange={e => setForm({ ...form, password: e.target.value })} 
+									className="border-gray-300 focus:border-blue-500"
+								/>
+								{errors.password && <p className="text-xs text-red-500 mt-1">{errors.password}</p>}
+							</div>
+							<div>
+								<label className="block text-sm font-medium mb-1 text-gray-700">Role <span className="text-red-500">*</span></label>
+								<select 
+									className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 focus:outline-none" 
+									value={form.role} 
+									onChange={e => setForm({ ...form, role: e.target.value })}
+								>
+									<option value="">Pilih Role</option>
+									<option value="Super Admin">Super Admin</option>
+									<option value="CS Support">CS Support</option>
+									<option value="CS Representative">CS Representative</option>
+									<option value="Advertiser">Advertiser</option>
+									<option value="Retention">Retention</option>
+								</select>
+								{errors.role && <p className="text-xs text-red-500 mt-1">{errors.role}</p>}
+							</div>
+							<div className="flex justify-end gap-3 pt-4">
+								<Button type="button" variant="outline" onClick={() => setShowModal(false)}>Batal</Button>
+								<Button type="submit" className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white">Simpan</Button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
+
+			{/* Edit User Modal */}
+			{showEditModal && editingUser && (
+				<div 
+					className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) {
+							closeEditModal();
+						}
+					}}
+				>
+					<div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 max-h-[90vh] overflow-auto">
+						<div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-slate-200 p-6">
+							<h3 className="text-xl font-bold text-slate-900 mb-1">Edit User</h3>
+							<p className="text-sm text-slate-600">Perbarui informasi user</p>
+						</div>
+						<form onSubmit={handleEditSubmit} className="p-6">
+							<div className="space-y-4">
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-2">
+										Nama Lengkap <span className="text-red-500">*</span>
+									</label>
+									<Input 
+										name="namaLengkap"
+										placeholder="Masukkan nama lengkap" 
+										value={editForm.namaLengkap} 
+										onChange={e => setEditForm({ ...editForm, namaLengkap: e.target.value })} 
+										className="w-full border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+									/>
+									{editErrors.namaLengkap && (
+										<p className="text-red-600 text-sm mt-1">{editErrors.namaLengkap}</p>
+									)}
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-2">
+										E-mail <span className="text-red-500">*</span>
+									</label>
+									<Input 
+										type="email" 
+										name="email"
+										placeholder="Masukkan alamat email" 
+										value={editForm.email} 
+										onChange={e => setEditForm({ ...editForm, email: e.target.value })} 
+										className="w-full border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+									/>
+									{editErrors.email && (
+										<p className="text-red-600 text-sm mt-1">{editErrors.email}</p>
+									)}
+								</div>
+								<div>
+									<label className="block text-sm font-medium text-slate-700 mb-2">
+										Role <span className="text-red-500">*</span>
+									</label>
+									<select 
+										className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none" 
+										value={editForm.role} 
+										onChange={e => setEditForm({ ...editForm, role: e.target.value })}
+									>
+										<option value="">Pilih Role</option>
+										<option value="Super Admin">Super Admin</option>
+										<option value="CS Support">CS Support</option>
+										<option value="CS Representative">CS Representative</option>
+										<option value="Advertiser">Advertiser</option>
+										<option value="Retention">Retention</option>
+									</select>
+									{editErrors.role && (
+										<p className="text-red-600 text-sm mt-1">{editErrors.role}</p>
+									)}
+								</div>
+							</div>
+							<div className="flex justify-end gap-3 pt-4">
+								<Button type="button" variant="outline" onClick={closeEditModal}>Batal</Button>
+								<Button type="submit" className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white">Simpan</Button>
+							</div>
+						</form>
+					</div>
+				</div>
+			)}
+
+			{/* Table Container - Modern style matching Data Prospek */}
+			<div className="bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden">
+				{/* Table Header */}
+				<div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-6 py-4">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3">
+							<div className="p-2 bg-blue-100 rounded-lg">
+								<Users className="h-5 w-5 text-blue-600" />
+							</div>
+							<div>
+								<h3 className="text-lg font-semibold text-slate-900">Data User</h3>
+								<p className="text-sm text-slate-600">Kelola data pengguna sistem</p>
+							</div>
+						</div>
+						<div className="text-sm text-slate-500">
+							Total: <span className="font-medium text-slate-900">{filteredUsers.length}</span> user
+						</div>
+					</div>
+				</div>
+
+				{/* Table Content */}
+				<div className="overflow-x-auto">
+					<Table>
+						<TableHeader>
+							<TableRow className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100">
+								<TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
+									<div className="flex items-center gap-2">
+										<Users className="h-4 w-4 text-slate-500" />
+										<span>Nama Lengkap</span>
+									</div>
+								</TableHead>
+								<TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
+									<div className="flex items-center gap-2">
+										<span>E-mail</span>
+									</div>
+								</TableHead>
+								<TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
+									<div className="flex items-center gap-2">
+										<Flag className="h-4 w-4 text-slate-500" />
+										<span>Role</span>
+									</div>
+								</TableHead>
+								<TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
+									<div className="flex items-center gap-2">
+										<span>Tanggal Dibuat</span>
+									</div>
+								</TableHead>
+								<TableHead className="py-4 px-6 text-center font-semibold text-slate-700">
+									<div className="flex items-center justify-center gap-2">
+										<span>Aksi</span>
+									</div>
+								</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{filteredUsers.length > 0 ? (
+								filteredUsers.map((user, index) => (
+									<TableRow key={user.id} className="transition-all duration-200 hover:bg-slate-50 border-b border-slate-100 last:border-b-0">
+										<TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
+											<div className="flex items-center gap-3">
+												<div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+													{user.name.charAt(0).toUpperCase()}
+												</div>
+												<div>
+													<div className="font-semibold text-slate-900">{user.name}</div>
+													<div className="text-sm text-slate-500">ID: {user.id}</div>
+												</div>
+											</div>
+										</TableCell>
+										<TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
+											<div className="text-slate-700">{user.email}</div>
+										</TableCell>
+										<TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
+											<span className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${getRoleBadgeColor(user.role)}`}>
+												{user.role}
+											</span>
+										</TableCell>
+										<TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
+											<div className="text-slate-700">
+												{new Date(user.createdAt).toLocaleDateString("id-ID", { 
+													day: "numeric", 
+													month: "long", 
+													year: "numeric" 
+												})}
+											</div>
+										</TableCell>
+										<TableCell className="py-4 px-6">
+											<div className="flex items-center justify-center gap-2">
+												{(() => {
+													const isUsed = checkDataUsage('user', user.id);
+													return (
+														<>
+															<Button 
+																variant="ghost" 
+																size="sm" 
+																onClick={isUsed ? undefined : () => openEditModal(user)}
+																disabled={isUsed}
+																className={`h-8 w-8 p-0 rounded-lg ${
+																	isUsed 
+																		? 'cursor-not-allowed opacity-50 bg-gray-100 text-gray-400' 
+																		: 'hover:bg-yellow-50 hover:text-yellow-600'
+																}`}
+																title={isUsed ? "Data sudah digunakan di data lain, tidak bisa diubah" : "Edit User"}
+															>
+																<Edit3 className="h-4 w-4" />
+															</Button>
+															<Button 
+																variant="ghost" 
+																size="sm" 
+																onClick={isUsed ? undefined : () => openDeleteModal(user)}
+																disabled={isUsed}
+																className={`h-8 w-8 p-0 rounded-lg ${
+																	isUsed 
+																		? 'cursor-not-allowed opacity-50 bg-gray-100 text-gray-400' 
+																		: 'text-red-500 hover:bg-red-50 hover:text-red-700'
+																}`}
+																title={isUsed ? "Data sudah digunakan di data lain, tidak bisa dihapus" : "Hapus User"}
+															>
+																<Trash2 className="h-4 w-4" />
+															</Button>
+														</>
+													);
+												})()}
+											</div>
+										</TableCell>
+									</TableRow>
+								))
+							) : (
+								<TableRow>
+									<TableCell colSpan={5} className="py-12 text-center">
+										<div className="flex flex-col items-center justify-center text-slate-500">
+											<div className="p-4 bg-slate-100 rounded-full mb-4">
+												<UserX className="h-8 w-8 text-slate-400" />
+											</div>
+											<p className="text-lg font-medium text-slate-600 mb-1">Tidak ada user ditemukan</p>
+											<p className="text-sm text-slate-500">Coba ubah kata kunci pencarian atau tambah user baru</p>
+										</div>
+									</TableCell>
+								</TableRow>
+							)}
+						</TableBody>
+					</Table>
+				</div>
+
+				{/* Table Footer */}
+				<div className="bg-slate-50 border-t border-slate-200 px-6 py-4">
+					<div className="flex items-center justify-between text-sm text-slate-600">
+						<div className="flex items-center gap-2">
+							<Users className="h-4 w-4" />
+							<span>
+								Menampilkan {filteredUsers.length > 0 ? '1' : '0'} hingga {filteredUsers.length} dari {filteredUsers.length} user
+							</span>
+						</div>
+						{filteredUsers.length > 0 && (
+							<div className="text-slate-500">
+								Terakhir diperbarui: {new Date().toLocaleDateString("id-ID")}
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+
+			{/* Delete Confirmation Modal */}
+			{showDeleteModal && userToDelete && (
+				<div 
+					className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) {
+							closeDeleteModal();
+						}
+					}}
+				>
+					<div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-in fade-in zoom-in duration-200">
+						{/* Modal Header */}
+						<div className="p-6 pb-4">
+							<div className="flex items-center gap-4 mb-4">
+								<div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+									<Trash2 className="h-6 w-6 text-red-600" />
+								</div>
+								<div className="flex-1">
+									<h2 className="text-xl font-bold text-slate-900">
+										Konfirmasi Hapus Data
+									</h2>
+									<p className="text-sm text-slate-600 mt-1">
+										Tindakan ini tidak dapat dibatalkan
+									</p>
+								</div>
+							</div>
+						</div>
+
+						{/* Modal Content */}
+						<div className="px-6 pb-6">
+							<div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+								<p className="text-slate-900 mb-2">
+									Apakah Anda yakin ingin menghapus user ini?
+								</p>
+								<div className="bg-white border border-red-200 rounded-lg p-3">
+									<p className="font-semibold text-slate-900">{userToDelete.name}</p>
+									<p className="text-sm text-slate-600">Email: {userToDelete.email}</p>
+									<p className="text-sm text-slate-600">Role: {userToDelete.role}</p>
+									<p className="text-sm text-slate-600">ID: {userToDelete.id}</p>
+								</div>
+							</div>
+
+							<div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+								<div className="flex items-start gap-3">
+									<div className="h-5 w-5 text-yellow-600 mt-0.5">⚠️</div>
+									<div>
+										<p className="text-sm font-medium text-yellow-800 mb-1">Peringatan</p>
+										<p className="text-sm text-yellow-700">
+											Data yang dihapus tidak dapat dikembalikan. Pastikan Anda telah mempertimbangkan keputusan ini dengan baik.
+										</p>
+									</div>
+								</div>
+							</div>
+
+							{/* Modal Actions */}
+							<div className="flex gap-3 justify-end">
+								<Button
+									variant="outline"
+									onClick={closeDeleteModal}
+									className="px-6 py-2 border-slate-300 text-slate-700 hover:bg-slate-50"
+								>
+									Batal
+								</Button>
+								<Button
+									onClick={handleDeleteUser}
+									className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white"
+								>
+									<Trash2 className="h-4 w-4 mr-2" />
+									Hapus Data
+								</Button>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Notification Toast */}
+			{notification && (
+				<div className="fixed inset-0 z-50 flex items-start justify-center pt-8 md:pt-16 px-4 pointer-events-none">
+					<div className="pointer-events-auto animate-in slide-in-from-top-4 fade-in zoom-in duration-300">
+						<div className={`
+							w-full max-w-sm sm:max-w-md lg:max-w-lg mx-auto shadow-2xl rounded-2xl border-2 backdrop-blur-sm
+							${notification.type === 'success' 
+								? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-400 shadow-green-200/50' 
+								: 'bg-gradient-to-r from-red-50 to-rose-50 border-red-400 shadow-red-200/50'
+							}
+						`}>
+							{/* Header with colored stripe */}
+							<div className={`
+								h-2 w-full rounded-t-2xl
+								${notification.type === 'success' 
+									? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+									: 'bg-gradient-to-r from-red-500 to-rose-500'
+								}
+							`}></div>
+							
+							{/* Main content */}
+							<div className="px-6 sm:px-8 py-5 sm:py-6">
+								<div className="flex items-start gap-3 sm:gap-4">
+									{/* Icon */}
+									<div className={`
+										flex-shrink-0 p-2 sm:p-3 rounded-full shadow-lg
+										${notification.type === 'success' 
+											? 'bg-green-100 ring-2 ring-green-300' 
+											: 'bg-red-100 ring-2 ring-red-300'
+										}
+									`}>
+										{notification.type === 'success' ? (
+											<CheckCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-600" />
+										) : (
+											<AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 text-red-600" />
+										)}
+									</div>
+									
+									{/* Message content */}
+									<div className="flex-1 min-w-0 pt-0.5 sm:pt-1">
+										<div className={`
+											text-base sm:text-lg lg:text-xl font-bold mb-1 sm:mb-2
+											${notification.type === 'success' ? 'text-green-900' : 'text-red-900'}
+										`}>
+											{notification.type === 'success' ? 'Berhasil!' : 'Terjadi Kesalahan!'}
+										</div>
+										<p className={`
+											text-sm sm:text-base lg:text-lg font-medium leading-relaxed
+											${notification.type === 'success' ? 'text-green-800' : 'text-red-800'}
+										`}>
+											{notification.message}
+										</p>
+									</div>
+									
+									{/* Close button */}
+									<div className="flex-shrink-0">
+										<button
+											className={`
+												p-1.5 sm:p-2 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 hover:scale-105
+												${notification.type === 'success' 
+													? 'text-green-600 hover:bg-green-100 focus:ring-green-500 hover:text-green-700' 
+													: 'text-red-600 hover:bg-red-100 focus:ring-red-500 hover:text-red-700'
+												}
+											`}
+											onClick={() => setNotification(null)}
+											title="Tutup notifikasi"
+										>
+											<X className="h-5 w-5 sm:h-6 sm:w-6" />
+										</button>
+									</div>
+								</div>
+								
+								{/* Enhanced progress bar */}
+								<div className="mt-3 sm:mt-4 mb-1">
+									<div className="w-full bg-gray-200 rounded-full h-1.5 sm:h-2 shadow-inner">
+										<div 
+											className={`
+												h-1.5 sm:h-2 rounded-full shadow-sm transition-all
+												${notification.type === 'success' 
+													? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+													: 'bg-gradient-to-r from-red-500 to-rose-500'
+												}
+											`}
+											style={{
+												animation: 'progressBar 3s linear forwards',
+												width: '100%'
+											}}
+										></div>
+									</div>
+									<div className="flex justify-center mt-2">
+										<span className={`
+											text-xs sm:text-sm font-medium
+											${notification.type === 'success' ? 'text-green-600' : 'text-red-600'}
+										`}>
+											Otomatis hilang dalam 3 detik
+										</span>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
+			<style jsx>{`
+				@keyframes progressBar {
+					from { width: 100%; }
+					to { width: 0%; }
+				}
+				
+				@keyframes slide-in-from-top-4 {
+					from { 
+						transform: translateY(-1rem);
+						opacity: 0;
+					}
+					to { 
+						transform: translateY(0);
+						opacity: 1;
+					}
+				}
+				
+				@keyframes zoom-in {
+					from { 
+						transform: scale(0.95);
+					}
+					to { 
+						transform: scale(1);
+					}
+				}
+				
+				@keyframes fade-in {
+					from { opacity: 0; }
+					to { opacity: 1; }
+				}
+				
+				.animate-in {
+					animation: slide-in-from-top-4 0.3s ease-out, zoom-in 0.3s ease-out, fade-in 0.3s ease-out;
+				}
+			`}</style>
+		</div>
+	);
+}
 
 function ServiceTab({ services }) {
 	const [showModal, setShowModal] = useState(false);
