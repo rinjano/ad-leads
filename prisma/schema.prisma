@@ -94,3 +94,13 @@ model BukanLeads {
 
   @@map("bukan_leads")
 }
+
+// Status Leads model
+model StatusLeads {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique // Nama status leads (e.g., "Baru", "Follow Up", "Qualified", "Proposal", "Deal", "Closed")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("status_leads")
+}

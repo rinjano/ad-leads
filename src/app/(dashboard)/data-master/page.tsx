@@ -20,6 +20,7 @@ import { KodeAdsTab } from '@/components/KodeAdsTab';
 import { SumberLeadsTab } from '@/components/SumberLeadsTab';
 import { TipeFaskesTab } from '@/components/TipeFaskesTab';
 import { BukanLeadsTab } from '@/components/BukanLeadsTab';
+import { StatusLeadsTab } from '@/components/StatusLeadsTab';
 
 const initialLeadSources = [
 	{ id: 1, name: "Instagram", createdAt: "2025-09-01", updatedAt: "2025-09-10" },
@@ -5255,7 +5256,7 @@ export default function DataMasterPage() {
 					<TipeFaskesTab />
 				</TabsContent>
 				<TabsContent value="lead-status" className="mt-6">
-					<LeadStatusTab leadStatus={leadStatus} />
+					<StatusLeadsTab />
 				</TabsContent>
 				<TabsContent value="not-leads" className="mt-6">
 					<BukanLeadsTab />
