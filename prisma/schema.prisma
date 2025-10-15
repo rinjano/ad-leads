@@ -48,3 +48,27 @@ model Layanan {
 
   @@map("layanan")
 }
+
+// Kode Ads model
+model KodeAds {
+  id        Int      @id @default(autoincrement())
+  kode      String   @unique // Kode ads (e.g., "ADS001", "FB-ADS-2024")
+  nama      String   // Nama/deskripsi kode ads
+  platform  String?  // Platform (e.g., "Facebook", "Google", "Instagram")
+  status    String   @default("aktif") // Status: "aktif" atau "nonaktif"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("kode_ads")
+}
+
+// Sumber Leads (Lead Source) model
+model SumberLeads {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique // Nama sumber leads (e.g., "Instagram", "Facebook", "WhatsApp", "Website")
+  deskripsi String?  // Deskripsi tambahan
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sumber_leads")
+}

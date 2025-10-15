@@ -16,6 +16,8 @@ import {
 import { PlusCircle, Pencil, Trash2, Search, Database, Users, Target, Code, Building, Flag, UserX, Eye, Edit3, CheckCircle, AlertCircle, X, Package } from "lucide-react";
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { LayananTab } from '@/components/LayananTab';
+import { KodeAdsTab } from '@/components/KodeAdsTab';
+import { SumberLeadsTab } from '@/components/SumberLeadsTab';
 
 const initialLeadSources = [
 	{ id: 1, name: "Instagram", createdAt: "2025-09-01", updatedAt: "2025-09-10" },
@@ -5242,10 +5244,10 @@ export default function DataMasterPage() {
 					<ProductTab products={products} services={services} />
 				</TabsContent>
 				<TabsContent value="ads-codes" className="mt-6">
-					<AdsCodeTab adsCodes={adsCodes} />
+					<KodeAdsTab />
 				</TabsContent>
 				<TabsContent value="lead-sources" className="mt-6">
-					<LeadSourceTab leadSources={leadSources} />
+					<SumberLeadsTab />
 				</TabsContent>
 				<TabsContent value="faskes-types" className="mt-6">
 					<FaskesTypeTab faskesTypes={faskesTypes} />
