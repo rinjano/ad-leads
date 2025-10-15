@@ -172,7 +172,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session, status } = useSession()
   const [appUser, setAppUser] = useState<AppUser | null>(null)
-  const loading = status === 'loading'
+  const [loadingAppUser, setLoadingAppUser] = useState(true)
+  const loading = status === 'loading' || loadingAppUser
 
   // Function to get user role data from demo users or database
   const getUserRoleData = async (email: string): Promise<AppUser | null> => {
@@ -201,16 +202,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const loadUserData = async () => {
+      if (status === 'loading') {
+        return // Wait for session to load first
+      }
+
+      setLoadingAppUser(true)
       if (session?.user?.email) {
         const userData = await getUserRoleData(session.user.email)
         setAppUser(userData)
       } else {
         setAppUser(null)
       }
+      setLoadingAppUser(false)
     }
     
     loadUserData()
-  }, [session])
+  }, [session, status])
 
   const signOut = async () => {
     await nextAuthSignOut({ callbackUrl: '/login' })

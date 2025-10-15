@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { PlusCircle, Pencil, Trash2, Search, Database, Users, Target, Code, Building, Flag, UserX, Eye, Edit3, CheckCircle, AlertCircle, X, Package } from "lucide-react";
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { LayananTab } from '@/components/LayananTab';
 
 const initialLeadSources = [
 	{ id: 1, name: "Instagram", createdAt: "2025-09-01", updatedAt: "2025-09-10" },
@@ -5235,7 +5236,7 @@ export default function DataMasterPage() {
 					<UserTab users={users} />
 				</TabsContent>
 				<TabsContent value="services" className="mt-6">
-					<ServiceTab services={services} />
+					<LayananTab />
 				</TabsContent>
 				<TabsContent value="products" className="mt-6">
 					<ProductTab products={products} services={services} />

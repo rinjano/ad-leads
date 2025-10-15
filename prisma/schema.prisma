@@ -38,3 +38,13 @@ model User {
 
   @@map("users")
 }
+
+// Layanan (Service) model
+model Layanan {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique // Nama layanan (e.g., "Konsultasi Medis", "Medical Check-up")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("layanan")
+}
