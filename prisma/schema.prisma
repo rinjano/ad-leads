@@ -72,3 +72,25 @@ model SumberLeads {
 
   @@map("sumber_leads")
 }
+
+// Tipe Faskes (Healthcare Facility Type) model
+model TipeFaskes {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique // Nama tipe faskes (e.g., "Rumah Sakit", "Klinik", "Puskesmas", "Apotek")
+  deskripsi String?  // Deskripsi tambahan
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tipe_faskes")
+}
+
+// Bukan Leads (Not Leads) model
+model BukanLeads {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique // Nama kategori bukan leads (e.g., "Spam", "Tidak Tertarik", "Salah Target", "Nomor Tidak Aktif")
+  deskripsi String?  // Deskripsi tambahan
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bukan_leads")
+}

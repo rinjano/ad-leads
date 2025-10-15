@@ -18,6 +18,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { LayananTab } from '@/components/LayananTab';
 import { KodeAdsTab } from '@/components/KodeAdsTab';
 import { SumberLeadsTab } from '@/components/SumberLeadsTab';
+import { TipeFaskesTab } from '@/components/TipeFaskesTab';
+import { BukanLeadsTab } from '@/components/BukanLeadsTab';
 
 const initialLeadSources = [
 	{ id: 1, name: "Instagram", createdAt: "2025-09-01", updatedAt: "2025-09-10" },
@@ -5250,13 +5252,13 @@ export default function DataMasterPage() {
 					<SumberLeadsTab />
 				</TabsContent>
 				<TabsContent value="faskes-types" className="mt-6">
-					<FaskesTypeTab faskesTypes={faskesTypes} />
+					<TipeFaskesTab />
 				</TabsContent>
 				<TabsContent value="lead-status" className="mt-6">
 					<LeadStatusTab leadStatus={leadStatus} />
 				</TabsContent>
 				<TabsContent value="not-leads" className="mt-6">
-					<NotLeadsTab notLeads={notLeads} />
+					<BukanLeadsTab />
 				</TabsContent>
 			</Tabs>
 		</div>
