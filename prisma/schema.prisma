@@ -53,8 +53,6 @@ model Layanan {
 model KodeAds {
   id        Int      @id @default(autoincrement())
   kode      String   @unique // Kode ads (e.g., "ADS001", "FB-ADS-2024")
-  nama      String   // Nama/deskripsi kode ads
-  platform  String?  // Platform (e.g., "Facebook", "Google", "Instagram")
   status    String   @default("aktif") // Status: "aktif" atau "nonaktif"
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

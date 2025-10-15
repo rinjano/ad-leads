@@ -58,16 +58,12 @@ export function KodeAdsTab() {
   })
 
   const filteredKodeAds = kodeAdsList.filter((kodeAds: any) =>
-    kodeAds.kode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    kodeAds.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (kodeAds.platform && kodeAds.platform.toLowerCase().includes(searchTerm.toLowerCase()))
+    kodeAds.kode.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const openModal = () => {
     reset({
       kode: '',
-      nama: '',
-      platform: '',
       status: 'aktif',
     })
     setShowModal(true)
@@ -86,8 +82,6 @@ export function KodeAdsTab() {
   const openEditModal = (kodeAds: any) => {
     setEditingKodeAds(kodeAds)
     setValueEdit('kode', kodeAds.kode)
-    setValueEdit('nama', kodeAds.nama)
-    setValueEdit('platform', kodeAds.platform || '')
     setValueEdit('status', kodeAds.status)
     setShowEditModal(true)
   }
@@ -164,7 +158,7 @@ export function KodeAdsTab() {
                 </label>
                 <Input
                   type="text"
-                  placeholder="Contoh: ADS001, FB-ADS-2024"
+                  placeholder="Masukkan Kode Ads"
                   {...register('kode')}
                   className="border-gray-300 focus:border-blue-500 uppercase"
                   onChange={(e) => {
@@ -173,30 +167,6 @@ export function KodeAdsTab() {
                   }}
                 />
                 {errors.kode && <p className="text-xs text-red-500 mt-1">{errors.kode.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700">
-                  Nama/Deskripsi <span className="text-red-500">*</span>
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Masukkan nama/deskripsi kode ads"
-                  {...register('nama')}
-                  className="border-gray-300 focus:border-blue-500"
-                />
-                {errors.nama && <p className="text-xs text-red-500 mt-1">{errors.nama.message}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700">
-                  Platform
-                </label>
-                <Input
-                  type="text"
-                  placeholder="Contoh: Facebook, Google, Instagram"
-                  {...register('platform')}
-                  className="border-gray-300 focus:border-blue-500"
-                />
-                {errors.platform && <p className="text-xs text-red-500 mt-1">{errors.platform.message}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-700">
@@ -250,7 +220,7 @@ export function KodeAdsTab() {
                     Kode Ads <span className="text-red-500">*</span>
                   </label>
                   <Input
-                    placeholder="Contoh: ADS001, FB-ADS-2024"
+                    placeholder="Masukkan Kode Ads"
                     {...registerEdit('kode')}
                     className="w-full border-slate-300 focus:border-blue-500 focus:ring-blue-500 uppercase"
                     onChange={(e) => {
@@ -259,28 +229,6 @@ export function KodeAdsTab() {
                     }}
                   />
                   {errorsEdit.kode && <p className="text-red-600 text-sm mt-1">{errorsEdit.kode.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Nama/Deskripsi <span className="text-red-500">*</span>
-                  </label>
-                  <Input
-                    placeholder="Masukkan nama/deskripsi kode ads"
-                    {...registerEdit('nama')}
-                    className="w-full border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                  {errorsEdit.nama && <p className="text-red-600 text-sm mt-1">{errorsEdit.nama.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Platform
-                  </label>
-                  <Input
-                    placeholder="Contoh: Facebook, Google, Instagram"
-                    {...registerEdit('platform')}
-                    className="w-full border-slate-300 focus:border-blue-500 focus:ring-blue-500"
-                  />
-                  {errorsEdit.platform && <p className="text-red-600 text-sm mt-1">{errorsEdit.platform.message}</p>}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -340,7 +288,6 @@ export function KodeAdsTab() {
                 <p className="text-slate-900 mb-2">Apakah Anda yakin ingin menghapus kode ads ini?</p>
                 <div className="bg-white border border-red-200 rounded-lg p-3">
                   <p className="font-semibold text-slate-900">{kodeAdsToDelete.kode}</p>
-                  <p className="text-sm text-slate-600">{kodeAdsToDelete.nama}</p>
                   <p className="text-xs text-slate-500 mt-1">ID: {kodeAdsToDelete.id}</p>
                 </div>
               </div>
@@ -392,12 +339,6 @@ export function KodeAdsTab() {
                   </div>
                 </TableHead>
                 <TableHead className="py-4 px-6 text-left font-semibold text-slate-700">
-                  Nama/Deskripsi
-                </TableHead>
-                <TableHead className="py-4 px-6 text-left font-semibold text-slate-700">
-                  Platform
-                </TableHead>
-                <TableHead className="py-4 px-6 text-left font-semibold text-slate-700">
                   Status
                 </TableHead>
                 <TableHead className="py-4 px-6 text-left font-semibold text-slate-700">
@@ -420,12 +361,6 @@ export function KodeAdsTab() {
                           <div className="text-xs text-slate-500">ID: {kodeAds.id}</div>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="py-4 px-6 text-slate-700">
-                      {kodeAds.nama}
-                    </TableCell>
-                    <TableCell className="py-4 px-6 text-slate-700">
-                      {kodeAds.platform || '-'}
                     </TableCell>
                     <TableCell className="py-4 px-6">
                       <Badge

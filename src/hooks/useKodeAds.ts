@@ -5,8 +5,6 @@ import type { KodeAdsInput } from '@/lib/validations/kode-ads'
 export interface KodeAds {
   id: number
   kode: string
-  nama: string
-  platform: string | null
   status: string
   createdAt: string
   updatedAt: string
