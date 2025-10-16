@@ -9,12 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useKodeAds } from "@/hooks/useKodeAds";
 import { useLayanan } from "@/hooks/useLayanan";
 import { useStatusLeads } from "@/hooks/useStatusLeads";
-import { useProspek, useDeleteProspek } from "@/hooks/useProspek";
+import { useProspek, useDeleteProspek, useUpdateProspek } from "@/hooks/useProspek";
 import { useSumberLeads } from "@/hooks/useSumberLeads";
 import { useTipeFaskes } from "@/hooks/useTipeFaskes";
 import { useBukanLeads } from "@/hooks/useBukanLeads";
 import { useProduk } from "@/hooks/useProduk";
-import { useCreateKonversi, useUpdateKonversi, useDeleteKonversi } from "@/hooks/useKonversi";
+import { useCreateKonversi, useUpdateKonversi, useDeleteKonversi, useKonversiByProspekId } from "@/hooks/useKonversi";
 
 import { 
   Search, UserPlus, Eye, Edit3, Trash2, ChevronLeft, ChevronRight,
@@ -412,6 +412,7 @@ export default function DataProspekPage() {
   // Fetch prospek data from database
   const { data: prospekList = [], isLoading: loadingProspek } = useProspek();
   const deleteProspekMutation = useDeleteProspek();
+  const updateProspekMutation = useUpdateProspek();
   
   // Fetch additional master data for mapping
   const { data: sumberLeadsList = [] } = useSumberLeads();
@@ -428,6 +429,9 @@ export default function DataProspekPage() {
   // Modal states
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedProspect, setSelectedProspect] = useState(null);
+  
+  // Fetch konversi data for selected prospek
+  const { data: konversiData, isLoading: loadingKonversi } = useKonversiByProspekId(selectedProspect?.id);
   
   // Delete confirmation modal states
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -1206,6 +1210,30 @@ export default function DataProspekPage() {
 
         // Save to database
         await createKonversiMutation.mutateAsync(konversiData);
+        
+        // Update prospek status to "Customer"
+        await updateProspekMutation.mutateAsync({
+          id: prospectToConvert.id,
+          data: {
+            tanggalProspek: prospectToConvert.prospectDate,
+            sumberLeads: prospectToConvert.leadSource,
+            kodeAds: prospectToConvert.adsCode || '',
+            idAds: prospectToConvert.adsId || '',
+            namaProspek: prospectToConvert.prospectName,
+            noWhatsApp: prospectToConvert.whatsappNumber,
+            email: prospectToConvert.email || '',
+            statusLeads: "Customer",  // Changed status
+            bukanLeads: '',  // Clear bukanLeads when converting to Customer
+            keteranganBukanLeads: '',  // Clear keteranganBukanLeads
+            layananAssist: prospectToConvert.assistService || '',
+            namaFaskes: prospectToConvert.faskesName || '',
+            tipeFaskes: prospectToConvert.faskesType || '',
+            provinsi: prospectToConvert.faskesProvinsi || '',
+            kota: prospectToConvert.faskesKota || '',
+            picLeads: prospectToConvert.picLead,
+            keterangan: prospectToConvert.description || ''
+          }
+        });
         
         // Close conversion form modal
         closeConversionFormModal();
@@ -2233,6 +2261,97 @@ value={filters.customEndDate}
                   </div>
                 </div>
               </div>
+
+              {/* Data Customer - Only show if leadStatus is "Customer" */}
+              {selectedProspect.leadStatus === "Customer" && konversiData && (
+                <div className="bg-gradient-to-r from-emerald-50 to-teal-100 rounded-xl p-6">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
+                    <svg className="h-5 w-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Informasi Customer
+                  </h3>
+                  
+                  <div className="space-y-4">
+                    {/* Tanggal Konversi & Total Nilai Transaksi */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Konversi</label>
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-2 text-emerald-600" />
+                          <p className="text-slate-900 font-medium">
+                            {konversiData.tanggalKonversi ? new Date(konversiData.tanggalKonversi).toLocaleDateString('id-ID', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            }) : '-'}
+                          </p>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-600 mb-1">Total Nilai Transaksi</label>
+                        <div className="flex items-center">
+                          <svg className="h-4 w-4 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-lg font-bold text-emerald-700">
+                            Rp {konversiData.totalNilaiTransaksi ? konversiData.totalNilaiTransaksi.toLocaleString('id-ID') : '0'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Layanan & Produk yang Dibeli */}
+                    {konversiData.konversi_customer_item && konversiData.konversi_customer_item.length > 0 && (
+                      <div className="mt-6">
+                        <label className="block text-sm font-medium text-slate-600 mb-3">Layanan & Produk yang Dibeli</label>
+                        <div className="space-y-3">
+                          {konversiData.konversi_customer_item.map((item, index) => (
+                            <div key={index} className="bg-white rounded-lg border border-emerald-200 p-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Layanan</p>
+                                  <Badge variant="secondary" className="text-sm font-medium bg-blue-100 text-blue-700">
+                                    {item.layanan?.nama || '-'}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Produk</p>
+                                  <Badge variant="secondary" className="text-sm font-medium bg-purple-100 text-purple-700">
+                                    {item.produk?.nama || '-'}
+                                  </Badge>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-slate-500 mb-1">Nilai Transaksi</p>
+                                  <p className="text-sm font-bold text-slate-900">
+                                    Rp {item.nilaiTransaksi ? item.nilaiTransaksi.toLocaleString('id-ID') : '0'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="mt-3 pt-3 border-t border-slate-200">
+                                <p className="text-xs text-slate-500 mb-1">Durasi Langganan</p>
+                                <p className="text-sm font-medium text-slate-900">
+                                  {item.durasiLangganan} {item.tipeDurasi}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Keterangan */}
+                    {konversiData.keterangan && (
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-slate-600 mb-2">Keterangan Konversi</label>
+                        <p className="text-slate-900 bg-white px-4 py-3 rounded-lg border border-emerald-200 leading-relaxed">
+                          {konversiData.keterangan}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}

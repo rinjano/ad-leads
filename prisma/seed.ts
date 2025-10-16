@@ -6,6 +6,29 @@ const prisma = new PrismaClient()
 async function main() {
   console.log('🌱 Starting database seed...')
 
+  // Seed Status Leads - Make sure "Customer" status exists
+  const statusLeadsData = [
+    { nama: 'Leads' },
+    { nama: 'Customer' },
+    { nama: 'Follow Up' },
+    { nama: 'Bukan Leads' },
+  ]
+
+  for (const status of statusLeadsData) {
+    const existingStatus = await prisma.statusLeads.findFirst({
+      where: { nama: status.nama },
+    })
+
+    if (!existingStatus) {
+      await prisma.statusLeads.create({
+        data: status,
+      })
+      console.log(`✅ Created status: ${status.nama}`)
+    } else {
+      console.log(`⏭️  Status "${status.nama}" already exists, skipping...`)
+    }
+  }
+
   // Demo accounts with roles
   const demoAccounts = [
     {
