@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useKodeAds } from "@/hooks/useKodeAds";
+import { useLayanan } from "@/hooks/useLayanan";
+import { useStatusLeads } from "@/hooks/useStatusLeads";
 
 import { 
   Search, UserPlus, Eye, Edit3, Trash2, ChevronLeft, ChevronRight,
@@ -394,6 +397,11 @@ export default function DataProspekPage() {
   const [itemsPerPage, setItemsPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Fetch data from Data Master
+  const { data: kodeAdsList = [] } = useKodeAds();
+  const { data: layananList = [] } = useLayanan();
+  const { data: statusLeadsList = [] } = useStatusLeads();
+
 
 
   // Modal states
@@ -536,23 +544,18 @@ export default function DataProspekPage() {
     customEndDate: ""
   });
 
-  // Master data for filters
-  const kodeAdsOptions = [
-    "IGM-2024-001", "FBM-2024-002", "GAD-2024-003", "WA-2024-004", 
-    "WEB-2024-005", "IGM-2024-006", "TIK-2024-007", "LIN-2024-008"
-  ];
+  // Master data for filters - dynamically fetched from Data Master and sorted alphabetically
+  const kodeAdsOptions = kodeAdsList
+    .map((item: any) => item.kode)
+    .sort((a: string, b: string) => a.localeCompare(b));
 
+  const layananAssistOptions = layananList
+    .map((item: any) => item.nama)
+    .sort((a: string, b: string) => a.localeCompare(b));
 
-
-  const layananAssistOptions = [
-    "Konsultasi Medis", "Vaksinasi", "Medical Check-up", "Telemedicine",
-    "Homecare", "Lab Test", "Radiologi", "Fisioterapi"
-  ];
-
-  const statusLeadsOptions = [
-    "Prospek", "Dihubungi", "Leads", "Bukan Leads", "On Going", 
-    "Follow Up", "Qualified", "Customer", "Closed Won", "Closed Lost"
-  ];
+  const statusLeadsOptions = statusLeadsList
+    .map((item: any) => item.nama)
+    .sort((a: string, b: string) => a.localeCompare(b));
 
   const periodeWaktuOptions = [
     { value: "today", label: "Hari ini" },

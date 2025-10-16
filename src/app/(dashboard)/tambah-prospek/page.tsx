@@ -3,6 +3,12 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from '@/contexts/AuthContext';
+import { useSumberLeads } from '@/hooks/useSumberLeads';
+import { useKodeAds } from '@/hooks/useKodeAds';
+import { useStatusLeads } from '@/hooks/useStatusLeads';
+import { useBukanLeads } from '@/hooks/useBukanLeads';
+import { useLayanan } from '@/hooks/useLayanan';
+import { useTipeFaskes } from '@/hooks/useTipeFaskes';
 
 export default function TambahProspekPage() {
   const router = useRouter();
@@ -50,73 +56,38 @@ export default function TambahProspekPage() {
   const [validationErrors, setValidationErrors] = useState([]);
   const [showValidationAlert, setShowValidationAlert] = useState(false);
 
-  // Data master
-  const sumberLeadsData = [
-    "Google",
-    "Meta Ads",
-    "Google Ads", 
-    "TikTok Ads",
-    "Instagram Ads",
-    "Referral",
-    "Website Organik",
-    "Cold Outreach",
-    "Event",
-    "Partnership"
-  ];
+  // Fetch data from Data Master using hooks
+  const { data: sumberLeadsList = [], isLoading: loadingSumberLeads } = useSumberLeads();
+  const { data: kodeAdsList = [], isLoading: loadingKodeAds } = useKodeAds();
+  const { data: statusLeadsList = [], isLoading: loadingStatusLeads } = useStatusLeads();
+  const { data: bukanLeadsList = [], isLoading: loadingBukanLeads } = useBukanLeads();
+  const { data: layananList = [], isLoading: loadingLayanan } = useLayanan();
+  const { data: tipeFaskesList = [], isLoading: loadingTipeFaskes } = useTipeFaskes();
 
-  const kodeAdsData = [
-    "ADS001",
-    "ADS002", 
-    "ADS003",
-    "ADS004",
-    "ADS005",
-    "META001",
-    "META002",
-    "GOOGLE001",
-    "GOOGLE002",
-    "TIKTOK001"
-  ];
+  // Sort data alphabetically
+  const sumberLeadsData = [...sumberLeadsList]
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
+    .map((item: any) => item.nama);
 
-  const statusLeadsData = [
-    "Prospek",
-    "Dihubungi", 
-    "Leads",
-    "Bukan Leads",
-    "On Going",
-    "Closed Won",
-    "Closed Lost"
-  ];
+  const kodeAdsData = [...kodeAdsList]
+    .sort((a: any, b: any) => a.kode.localeCompare(b.kode))
+    .map((item: any) => item.kode);
 
-  const bukanLeadsData = [
-    "Tidak Ada Respon",
-    "Tidak Berminat",
-    "Budget Tidak Sesuai",
-    "Lokasi Tidak Sesuai", 
-    "Sudah Ada Vendor",
-    "Spam/Fake",
-    "Lainnya"
-  ];
+  const statusLeadsData = [...statusLeadsList]
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
+    .map((item: any) => item.nama);
 
-  const layananAssistData = [
-    "Konsultasi Medis",
-    "Vaksinasi",
-    "Medical Check-up",
-    "Telemedicine",
-    "Homecare",
-    "Lab Test",
-    "Radiologi",
-    "Fisioterapi"
-  ];
+  const bukanLeadsData = [...bukanLeadsList]
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
+    .map((item: any) => item.nama);
 
-  const tipeFaskesData = [
-    "Rumah Sakit",
-    "Klinik", 
-    "Puskesmas",
-    "Praktek Dokter",
-    "Laboratorium",
-    "Apotek",
-    "Klinik Kecantikan"
-  ];
+  const layananAssistData = [...layananList]
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
+    .map((item: any) => item.nama);
+
+  const tipeFaskesData = [...tipeFaskesList]
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
+    .map((item: any) => item.nama);
 
   // Complete Indonesian provinces data
   const provinsiData = [
