@@ -52,10 +52,12 @@ export function BukanLeadsTab() {
     resolver: zodResolver(bukanLeadsSchema) as any,
   })
 
-  const filteredBukanLeads = bukanLeadsList.filter((bukan: any) =>
-    bukan.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (bukan.deskripsi && bukan.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  const filteredBukanLeads = bukanLeadsList
+    .filter((bukan: any) =>
+      bukan.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (bukan.deskripsi && bukan.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
 
   const openModal = () => {
     reset({

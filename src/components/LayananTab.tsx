@@ -52,9 +52,11 @@ export function LayananTab() {
     resolver: zodResolver(layananSchema),
   })
 
-  const filteredLayanan = layananList.filter((layanan: any) =>
-    layanan.nama.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredLayanan = layananList
+    .filter((layanan: any) =>
+      layanan.nama.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
 
   const openModal = () => {
     reset()

@@ -52,10 +52,12 @@ export function TipeFaskesTab() {
     resolver: zodResolver(tipeFaskesSchema) as any,
   })
 
-  const filteredTipeFaskes = tipeFaskesList.filter((tipeFaskes: any) =>
-    tipeFaskes.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (tipeFaskes.deskripsi && tipeFaskes.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  const filteredTipeFaskes = tipeFaskesList
+    .filter((tipeFaskes: any) =>
+      tipeFaskes.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (tipeFaskes.deskripsi && tipeFaskes.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
 
   const openModal = () => {
     reset({

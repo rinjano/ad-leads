@@ -52,10 +52,12 @@ export function SumberLeadsTab() {
     resolver: zodResolver(sumberLeadsSchema) as any,
   })
 
-  const filteredSumberLeads = sumberLeadsList.filter((sumberLeads: any) =>
-    sumberLeads.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (sumberLeads.deskripsi && sumberLeads.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  const filteredSumberLeads = sumberLeadsList
+    .filter((sumberLeads: any) =>
+      sumberLeads.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sumberLeads.deskripsi && sumberLeads.deskripsi.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
 
   const openModal = () => {
     reset({

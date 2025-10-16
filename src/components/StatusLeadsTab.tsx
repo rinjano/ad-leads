@@ -52,9 +52,11 @@ export function StatusLeadsTab() {
     resolver: zodResolver(statusLeadsSchema) as any,
   })
 
-  const filteredStatusLeads = statusLeadsList.filter((status: any) =>
-    status.nama.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredStatusLeads = statusLeadsList
+    .filter((status: any) =>
+      status.nama.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a: any, b: any) => a.nama.localeCompare(b.nama))
 
   const openModal = () => {
     reset({

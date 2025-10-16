@@ -57,9 +57,11 @@ export function KodeAdsTab() {
     resolver: zodResolver(kodeAdsSchema) as any,
   })
 
-  const filteredKodeAds = kodeAdsList.filter((kodeAds: any) =>
-    kodeAds.kode.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredKodeAds = kodeAdsList
+    .filter((kodeAds: any) =>
+      kodeAds.kode.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a: any, b: any) => a.kode.localeCompare(b.kode))
 
   const openModal = () => {
     reset({

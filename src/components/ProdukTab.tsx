@@ -50,10 +50,12 @@ export function ProdukTab() {
   });
 
   const filteredProduk = useMemo(() => {
-    return produkList.filter((produk) =>
-      produk.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      produk.layanan.nama.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    return produkList
+      .filter((produk) =>
+        produk.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        produk.layanan.nama.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => a.nama.localeCompare(b.nama));
   }, [produkList, searchTerm]);
 
   const handleOpenAddModal = () => {
