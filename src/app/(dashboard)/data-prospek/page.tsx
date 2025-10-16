@@ -9,6 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useKodeAds } from "@/hooks/useKodeAds";
 import { useLayanan } from "@/hooks/useLayanan";
 import { useStatusLeads } from "@/hooks/useStatusLeads";
+import { useProspek, useDeleteProspek } from "@/hooks/useProspek";
+import { useSumberLeads } from "@/hooks/useSumberLeads";
+import { useTipeFaskes } from "@/hooks/useTipeFaskes";
+import { useBukanLeads } from "@/hooks/useBukanLeads";
+import { useProduk } from "@/hooks/useProduk";
+import { useCreateKonversi, useUpdateKonversi, useDeleteKonversi } from "@/hooks/useKonversi";
 
 import { 
   Search, UserPlus, Eye, Edit3, Trash2, ChevronLeft, ChevronRight,
@@ -401,6 +407,21 @@ export default function DataProspekPage() {
   const { data: kodeAdsList = [] } = useKodeAds();
   const { data: layananList = [] } = useLayanan();
   const { data: statusLeadsList = [] } = useStatusLeads();
+  const { data: produkList = [] } = useProduk();
+  
+  // Fetch prospek data from database
+  const { data: prospekList = [], isLoading: loadingProspek } = useProspek();
+  const deleteProspekMutation = useDeleteProspek();
+  
+  // Fetch additional master data for mapping
+  const { data: sumberLeadsList = [] } = useSumberLeads();
+  const { data: tipeFaskesList = [] } = useTipeFaskes();
+  const { data: bukanLeadsList = [] } = useBukanLeads();
+  
+  // Konversi customer mutations
+  const createKonversiMutation = useCreateKonversi();
+  const updateKonversiMutation = useUpdateKonversi();
+  const deleteKonversiMutation = useDeleteKonversi();
 
 
 
@@ -432,53 +453,23 @@ export default function DataProspekPage() {
   const [conversionErrors, setConversionErrors] = useState({});
   const [isConverting, setIsConverting] = useState(false);
 
-  // Master data untuk produk dan layanan
-  const masterServices = [
-    { id: 1, name: "Konsultasi Medis", description: "Layanan konsultasi kesehatan" },
-    { id: 2, name: "Vaksinasi", description: "Layanan vaksinasi lengkap" },
-    { id: 3, name: "Medical Check-up", description: "Pemeriksaan kesehatan menyeluruh" },
-    { id: 4, name: "Telemedicine", description: "Konsultasi online" },
-    { id: 5, name: "Homecare", description: "Perawatan di rumah" },
-    { id: 6, name: "Lab Test", description: "Pemeriksaan laboratorium" },
-    { id: 7, name: "Radiologi", description: "Pemeriksaan radiologi" },
-    { id: 8, name: "Fisioterapi", description: "Terapi fisik dan rehabilitasi" }
-  ];
+  // Master data untuk produk dan layanan (dinamis dari database)
+  const masterServices = React.useMemo(() => {
+    return layananList.map((layanan: any) => ({
+      id: layanan.id,
+      name: layanan.nama,
+      description: '' // Layanan tidak punya deskripsi di schema
+    })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [layananList]);
 
-  const masterProducts = [
-    // Produk untuk Konsultasi Medis
-    { id: 1, name: "Konsultasi Dokter Umum", serviceId: 1, serviceName: "Konsultasi Medis" },
-    { id: 2, name: "Konsultasi Dokter Spesialis", serviceId: 1, serviceName: "Konsultasi Medis" },
-    
-    // Produk untuk Vaksinasi
-    { id: 3, name: "Vaksin COVID-19", serviceId: 2, serviceName: "Vaksinasi" },
-    { id: 4, name: "Vaksin Influenza", serviceId: 2, serviceName: "Vaksinasi" },
-    { id: 5, name: "Vaksin Hepatitis B", serviceId: 2, serviceName: "Vaksinasi" },
-    
-    // Produk untuk Medical Check-up
-    { id: 6, name: "MCU Basic", serviceId: 3, serviceName: "Medical Check-up" },
-    { id: 7, name: "MCU Executive", serviceId: 3, serviceName: "Medical Check-up" },
-    { id: 8, name: "MCU Premium", serviceId: 3, serviceName: "Medical Check-up" },
-    
-    // Produk untuk Telemedicine
-    { id: 9, name: "Telemedicine Basic", serviceId: 4, serviceName: "Telemedicine" },
-    { id: 10, name: "Telemedicine Plus", serviceId: 4, serviceName: "Telemedicine" },
-    
-    // Produk untuk Homecare
-    { id: 11, name: "Homecare Nursing", serviceId: 5, serviceName: "Homecare" },
-    { id: 12, name: "Homecare Dokter", serviceId: 5, serviceName: "Homecare" },
-    
-    // Produk untuk Lab Test
-    { id: 13, name: "Lab Test Darah Lengkap", serviceId: 6, serviceName: "Lab Test" },
-    { id: 14, name: "Lab Test Urine", serviceId: 6, serviceName: "Lab Test" },
-    
-    // Produk untuk Radiologi
-    { id: 15, name: "Rontgen Dada", serviceId: 7, serviceName: "Radiologi" },
-    { id: 16, name: "CT Scan", serviceId: 7, serviceName: "Radiologi" },
-    
-    // Produk untuk Fisioterapi
-    { id: 17, name: "Fisioterapi Stroke", serviceId: 8, serviceName: "Fisioterapi" },
-    { id: 18, name: "Fisioterapi Olahraga", serviceId: 8, serviceName: "Fisioterapi" }
-  ];
+  const masterProducts = React.useMemo(() => {
+    return produkList.map((produk: any) => ({
+      id: produk.id,
+      name: produk.nama,
+      serviceId: produk.layananId,
+      serviceName: produk.layanan?.nama || ''
+    })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [produkList]);
 
   // Format Rupiah functions
   const formatRupiah = (angka) => {
@@ -499,11 +490,48 @@ export default function DataProspekPage() {
     return rupiah.replace(/[^\d]/g, '');
   };
 
-  // Prospects data state (to allow for deletion)
-  const [prospects, setProspects] = useState(dummyProspects);
-
   // Notification state
   const [notification, setNotification] = useState(null);
+  
+  // Map prospek data from database to UI format using useMemo to avoid infinite loop
+  const prospects = React.useMemo(() => {
+    if (prospekList.length === 0 || sumberLeadsList.length === 0) {
+      return [];
+    }
+    
+    return prospekList.map((prospek: any) => {
+      const sumberLeadsName = sumberLeadsList.find((s: any) => s.id === prospek.sumberLeadsId)?.nama || '';
+      const kodeAdsName = prospek.kodeAdsId ? (kodeAdsList.find((k: any) => k.id === prospek.kodeAdsId)?.kode || '') : '';
+      const statusLeadsName = statusLeadsList.find((s: any) => s.id === prospek.statusLeadsId)?.nama || '';
+      const bukanLeadsName = prospek.bukanLeadsId ? (bukanLeadsList.find((b: any) => b.id === prospek.bukanLeadsId)?.nama || '') : '';
+      const layananName = layananList.find((l: any) => l.id === prospek.layananAssistId)?.nama || '';
+      const tipeFaskesName = tipeFaskesList.find((t: any) => t.id === prospek.tipeFaskesId)?.nama || '';
+      
+      return {
+        id: prospek.id,
+        createdDate: new Date(prospek.createdAt).toISOString().split('T')[0],
+        prospectDate: new Date(prospek.tanggalProspek).toISOString().split('T')[0],
+        leadSource: sumberLeadsName,
+        adsCode: kodeAdsName,
+        adsId: prospek.idAds || '',
+        prospectName: prospek.namaProspek,
+        whatsappNumber: prospek.noWhatsApp,
+        email: prospek.email || '',
+        leadStatus: statusLeadsName,
+        notLeadReason: bukanLeadsName,
+        bukanLeadsReason: prospek.keteranganBukanLeads || '',
+        description: prospek.keterangan || '',
+        assistService: layananName,
+        faskesName: prospek.namaFaskes,
+        faskesType: tipeFaskesName,
+        faskesLocation: prospek.kota,
+        faskesProvinsi: prospek.provinsi,
+        faskesKota: prospek.kota,
+        picLead: prospek.picLeads,
+        keterangan: prospek.keterangan || ''
+      };
+    });
+  }, [prospekList, sumberLeadsList, kodeAdsList, statusLeadsList, bukanLeadsList, layananList, tipeFaskesList]);
 
   // Ads codes data state
   const [adsCodes, setAdsCodes] = useState(dummyAdsCodes);
@@ -719,25 +747,28 @@ export default function DataProspekPage() {
     setProspectToDelete(null);
   };
 
-  const handleDeleteProspect = () => {
+  const handleDeleteProspect = async () => {
     if (prospectToDelete) {
-      // Remove the prospect from the list
-      setProspects(prevProspects => 
-        prevProspects.filter(prospect => prospect.id !== prospectToDelete.id)
-      );
-      
-      // Close the modal
-      closeDeleteModal();
-      
-      // Reset to first page if current page becomes empty
-      const remainingProspects = prospects.filter(prospect => prospect.id !== prospectToDelete.id);
-      const newTotalPages = Math.ceil(remainingProspects.length / parseInt(itemsPerPage));
-      if (currentPage > newTotalPages && newTotalPages > 0) {
-        setCurrentPage(newTotalPages);
+      try {
+        // Delete from database
+        await deleteProspekMutation.mutateAsync(prospectToDelete.id);
+        
+        // Close the modal
+        closeDeleteModal();
+        
+        // Reset to first page if current page becomes empty
+        const remainingProspects = prospects.filter(prospect => prospect.id !== prospectToDelete.id);
+        const newTotalPages = Math.ceil(remainingProspects.length / parseInt(itemsPerPage));
+        if (currentPage > newTotalPages && newTotalPages > 0) {
+          setCurrentPage(newTotalPages);
+        }
+        
+        // Show delete notification
+        showNotification("Data prospek berhasil dihapus.", "success");
+      } catch (error) {
+        console.error('Error deleting prospek:', error);
+        showNotification("Gagal menghapus prospek. Silakan coba lagi.", "error");
       }
-      
-      // Show delete notification
-      showNotification("Data prospek berhasil dihapus.", "success");
     }
   };
 
@@ -1025,18 +1056,6 @@ export default function DataProspekPage() {
         originalSubscriptionId: selectedSubscription.id
       };
 
-      // Update prospects data
-      setProspects(prevProspects =>
-        prevProspects.map(prospect =>
-          prospect.id === selectedCustomer.id
-            ? {
-                ...prospect,
-                conversionData: [...(prospect.conversionData || []), renewalSubscription]
-              }
-            : prospect
-        )
-      );
-
       // Close modal and show success
       setShowRenewalModal(false);
       showNotification(
@@ -1161,66 +1180,42 @@ export default function DataProspekPage() {
       }
 
       if (prospectToConvert) {
-        // Simulate API call delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Prepare conversion data untuk multiple items
-        const conversionDataArray = conversionForm.serviceProductItems.map((item, index) => {
+        // Prepare items for database
+        const items = conversionForm.serviceProductItems.map((item) => {
           const numericTransactionValue = unformatRupiah(item.transactionValue);
-          const selectedService = masterServices.find(s => s.id === parseInt(item.serviceId));
-          const selectedProduct = masterProducts.find(p => p.id === parseInt(item.productId));
-          const currentDate = new Date().toISOString().split('T')[0];
-          const duration = parseInt(item.subscriptionDuration);
-          const durationType = item.durationType;
-          
-          // Calculate end date based on duration and type
-          const startDate = new Date(item.startDate);
-          const endDate = new Date(startDate);
-          if (durationType === 'months') {
-            endDate.setMonth(endDate.getMonth() + duration);
-          } else {
-            endDate.setFullYear(endDate.getFullYear() + duration);
-          }
-          
           return {
-            id: Date.now() + index, // Generate unique ID
-            serviceId: parseInt(item.serviceId),
-            serviceName: selectedService?.name,
-            productId: parseInt(item.productId), 
-            productName: selectedProduct?.name,
-            transactionValue: parseFloat(numericTransactionValue),
-            subscriptionDuration: duration,
-            durationType: durationType,
-            conversionDate: currentDate,
-            startDate: item.startDate,
-            endDate: endDate.toISOString().split('T')[0],
-            status: 'active',
-            isRenewal: false
+            layananId: parseInt(item.serviceId),
+            produkId: parseInt(item.productId),
+            nilaiTransaksi: parseFloat(numericTransactionValue),
+            durasiLangganan: parseInt(item.subscriptionDuration),
+            tipeDurasi: item.durationType,
           };
         });
+
+        // Calculate total transaction value
+        const totalNilaiTransaksi = items.reduce((sum, item) => sum + item.nilaiTransaksi, 0);
+
+        // Create konversi customer data
+        const konversiData = {
+          prospekId: prospectToConvert.id,
+          tanggalKonversi: new Date().toISOString().split('T')[0],
+          totalNilaiTransaksi: totalNilaiTransaksi,
+          keterangan: `Konversi dari prospek: ${prospectToConvert.prospectName}`,
+          items: items,
+        };
+
+        // Save to database
+        await createKonversiMutation.mutateAsync(konversiData);
         
-        // Update the prospect status to "Customer" dan simpan multiple conversion data
-        setProspects(prevProspects => 
-          prevProspects.map(prospect => 
-            prospect.id === prospectToConvert.id 
-              ? { 
-                  ...prospect, 
-                  leadStatus: "Customer",
-                  // Update layanan ke yang pertama dipilih atau kombinasi
-                  assistService: conversionDataArray[0]?.serviceName || prospect.assistService,
-                  conversionData: conversionDataArray // Array dari multiple layanan-produk
-                } 
-              : prospect
-          )
-        );
-          
+        // Close conversion form modal
         closeConversionFormModal();
         const itemCount = conversionForm.serviceProductItems.length;
         const itemText = itemCount === 1 ? 'layanan' : 'layanan';
         showNotification(`Data berhasil dikonversi menjadi Customer! ${itemCount} ${itemText} dan produk telah tersimpan.`, "success");
       }
     } catch (error) {
-      showNotification("Terjadi kesalahan saat konversi data. Silakan coba lagi.", "error");
+      console.error('Error creating konversi:', error);
+      showNotification(error.message || "Terjadi kesalahan saat konversi data. Silakan coba lagi.", "error");
     } finally {
       setIsConverting(false);
     }

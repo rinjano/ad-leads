@@ -9,6 +9,7 @@ import { useStatusLeads } from '@/hooks/useStatusLeads';
 import { useBukanLeads } from '@/hooks/useBukanLeads';
 import { useLayanan } from '@/hooks/useLayanan';
 import { useTipeFaskes } from '@/hooks/useTipeFaskes';
+import { useCreateProspek } from '@/hooks/useProspek';
 
 export default function TambahProspekPage() {
   const router = useRouter();
@@ -63,6 +64,9 @@ export default function TambahProspekPage() {
   const { data: bukanLeadsList = [], isLoading: loadingBukanLeads } = useBukanLeads();
   const { data: layananList = [], isLoading: loadingLayanan } = useLayanan();
   const { data: tipeFaskesList = [], isLoading: loadingTipeFaskes } = useTipeFaskes();
+  
+  // Mutation for creating prospek
+  const createProspekMutation = useCreateProspek();
 
   // Sort data alphabetically
   const sumberLeadsData = [...sumberLeadsList]
@@ -345,11 +349,10 @@ export default function TambahProspekPage() {
       picLeads: "PIC Leads"
     };
 
-    // Basic required fields
+    // Basic required fields (email, layananAssist, namaFaskes, tipeFaskes, provinsi, kota sekarang optional)
     const basicRequiredFields = [
-      'tanggalProspek', 'sumberLeads', 'namaProspek', 'noWhatsApp', 'email',
-      'statusLeads', 'layananAssist', 'namaFaskes', 'tipeFaskes', 
-      'provinsi', 'kota', 'picLeads'
+      'tanggalProspek', 'sumberLeads', 'namaProspek', 'noWhatsApp',
+      'statusLeads', 'picLeads'
     ];
 
     // Check basic required fields
@@ -400,7 +403,7 @@ export default function TambahProspekPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate form
@@ -420,14 +423,19 @@ export default function TambahProspekPage() {
     setShowValidationAlert(false);
     setValidationErrors([]);
     
-    // Add form submission logic here
-    console.log("Form Data:", formData);
-    
-    // Set success message in localStorage
-    localStorage.setItem('prospectSuccess', 'Data prospek berhasil ditambahkan.');
-    
-    // Navigate back to data prospek page
-    router.push('/data-prospek');
+    try {
+      // Submit to database
+      await createProspekMutation.mutateAsync(formData);
+      
+      // Set success message in localStorage
+      localStorage.setItem('prospectSuccess', 'Data prospek berhasil ditambahkan.');
+      
+      // Navigate back to data prospek page
+      router.push('/data-prospek');
+    } catch (error) {
+      console.error('Error creating prospek:', error);
+      alert('Gagal menambahkan prospek. Silakan coba lagi.');
+    }
   };
 
   return (
@@ -581,7 +589,7 @@ export default function TambahProspekPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  E-mail *
+                  E-mail
                 </label>
                 <input
                   type="email"
@@ -589,7 +597,6 @@ export default function TambahProspekPage() {
                   onChange={(e) => handleFormDataChange('email', e.target.value)}
                   placeholder="Contoh: user@example.com"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 />
               </div>
 
@@ -654,13 +661,12 @@ export default function TambahProspekPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Layanan Assist *
+                  Layanan Assist
                 </label>
                 <select
                   value={formData.layananAssist}
                   onChange={(e) => handleFormDataChange('layananAssist', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 >
                   <option value="">Pilih layanan assist</option>
                   {layananAssistData.map((layanan) => (
@@ -677,7 +683,7 @@ export default function TambahProspekPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama Faskes *
+                  Nama Faskes
                 </label>
                 <input
                   type="text"
@@ -685,19 +691,17 @@ export default function TambahProspekPage() {
                   onChange={(e) => handleFormDataChange('namaFaskes', e.target.value)}
                   placeholder="Masukkan nama fasilitas kesehatan"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipe Faskes *
+                  Tipe Faskes
                 </label>
                 <select
                   value={formData.tipeFaskes}
                   onChange={(e) => handleFormDataChange('tipeFaskes', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 >
                   <option value="">Pilih tipe faskes</option>
                   {tipeFaskesData.map((tipe) => (
@@ -714,13 +718,12 @@ export default function TambahProspekPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Provinsi *
+                  Provinsi
                 </label>
                 <select
                   value={formData.provinsi}
                   onChange={(e) => handleFormDataChange('provinsi', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 >
                   <option value="">Pilih provinsi</option>
                   {provinsiData.map((provinsi) => (
@@ -731,7 +734,7 @@ export default function TambahProspekPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Kota/Kabupaten *
+                  Kota/Kabupaten
                 </label>
                 <div className="relative">
                   <select
@@ -739,7 +742,6 @@ export default function TambahProspekPage() {
                     onChange={(e) => handleFormDataChange('kota', e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     disabled={!formData.provinsi || loadingKota || kotaError !== ""}
-                    required
                   >
                     <option value="">
                       {!formData.provinsi ? "Pilih provinsi terlebih dahulu" : 

@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
   output   = "../generated/prisma"
@@ -15,7 +9,159 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
-// Enum for user roles
+model User {
+  email       String        @unique
+  name        String
+  companyId   Int?
+  createdAt   DateTime      @default(now())
+  password    String
+  updatedAt   DateTime      @updatedAt
+  id          Int           @id @default(autoincrement())
+  role        UserRole      @default(user)
+  userKodeAds UserKodeAds[]
+
+  @@map("users")
+}
+
+model Layanan {
+  id                     Int                      @id @default(autoincrement())
+  nama                   String                   @unique
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  konversi_customer_item konversi_customer_item[]
+  produk                 Produk[]
+
+  @@map("layanan")
+}
+
+model Produk {
+  id                     Int                      @id @default(autoincrement())
+  nama                   String
+  deskripsi              String?
+  layananId              Int
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  konversi_customer_item konversi_customer_item[]
+  layanan                Layanan                  @relation(fields: [layananId], references: [id], onDelete: Cascade)
+
+  @@map("produk")
+}
+
+model KodeAds {
+  id          Int           @id @default(autoincrement())
+  kode        String        @unique
+  status      String        @default("aktif")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  userKodeAds UserKodeAds[]
+
+  @@map("kode_ads")
+}
+
+model UserKodeAds {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  kodeAdsId Int
+  createdAt DateTime @default(now())
+  kodeAds   KodeAds  @relation(fields: [kodeAdsId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kodeAdsId])
+  @@map("user_kode_ads")
+}
+
+model SumberLeads {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique
+  deskripsi String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sumber_leads")
+}
+
+model TipeFaskes {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique
+  deskripsi String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tipe_faskes")
+}
+
+model BukanLeads {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique
+  deskripsi String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("bukan_leads")
+}
+
+model StatusLeads {
+  id        Int      @id @default(autoincrement())
+  nama      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("status_leads")
+}
+
+model Prospek {
+  id                   Int                 @id @default(autoincrement())
+  tanggalProspek       DateTime
+  sumberLeadsId        Int
+  kodeAdsId            Int?
+  idAds                String?
+  namaProspek          String
+  noWhatsApp           String
+  email                String?
+  statusLeadsId        Int
+  bukanLeadsId         Int?
+  keteranganBukanLeads String?
+  layananAssistId      Int?
+  namaFaskes           String?
+  tipeFaskesId         Int?
+  provinsi             String?
+  kota                 String?
+  picLeads             String
+  keterangan           String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  konversi_customer    konversi_customer[]
+
+  @@map("prospek")
+}
+
+model konversi_customer {
+  id                     Int                      @id @default(autoincrement())
+  prospekId              Int
+  tanggalKonversi        DateTime
+  totalNilaiTransaksi    Float
+  keterangan             String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime
+  prospek                Prospek                  @relation(fields: [prospekId], references: [id], onDelete: Cascade)
+  konversi_customer_item konversi_customer_item[]
+}
+
+model konversi_customer_item {
+  id                 Int               @id @default(autoincrement())
+  konversiCustomerId Int
+  layananId          Int
+  produkId           Int
+  nilaiTransaksi     Float
+  durasiLangganan    Int
+  tipeDurasi         String
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime
+  konversi_customer  konversi_customer @relation(fields: [konversiCustomerId], references: [id], onDelete: Cascade)
+  layanan            Layanan           @relation(fields: [layananId], references: [id])
+  produk             Produk            @relation(fields: [produkId], references: [id])
+}
+
 enum UserRole {
   admin
   user
@@ -23,111 +169,4 @@ enum UserRole {
   advertiser
   cs_support
   retention_specialist
-}
-
-// User model for authentication
-model User {
-  id         Int               @id @default(autoincrement())
-  email      String            @unique
-  password   String            // Hashed password
-  name       String
-  companyId  Int?              // Optional company ID
-  role       UserRole          @default(user)
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
-  userKodeAds UserKodeAds[]    // Relasi many-to-many dengan KodeAds untuk advertiser
-
-  @@map("users")
-}
-
-// Layanan (Service) model
-model Layanan {
-  id        Int       @id @default(autoincrement())
-  nama      String    @unique // Nama layanan (e.g., "Konsultasi Medis", "Medical Check-up")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  produk    Produk[]  // Relasi one-to-many dengan Produk
-
-  @@map("layanan")
-}
-
-// Produk (Product) model
-model Produk {
-  id         Int      @id @default(autoincrement())
-  nama       String   // Nama produk
-  deskripsi  String?  // Deskripsi produk (optional)
-  layananId  Int      // Foreign key ke Layanan
-  layanan    Layanan  @relation(fields: [layananId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@map("produk")
-}
-
-// Kode Ads model
-model KodeAds {
-  id          Int            @id @default(autoincrement())
-  kode        String         @unique // Kode ads (e.g., "ADS001", "FB-ADS-2024")
-  status      String         @default("aktif") // Status: "aktif" atau "nonaktif"
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  userKodeAds UserKodeAds[]  // Relasi many-to-many dengan User
-
-  @@map("kode_ads")
-}
-
-// Junction table untuk relasi many-to-many User dan KodeAds
-model UserKodeAds {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  kodeAdsId Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kodeAds   KodeAds  @relation(fields: [kodeAdsId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, kodeAdsId])
-  @@map("user_kode_ads")
-}
-
-// Sumber Leads (Lead Source) model
-model SumberLeads {
-  id        Int      @id @default(autoincrement())
-  nama      String   @unique // Nama sumber leads (e.g., "Instagram", "Facebook", "WhatsApp", "Website")
-  deskripsi String?  // Deskripsi tambahan
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("sumber_leads")
-}
-
-// Tipe Faskes (Healthcare Facility Type) model
-model TipeFaskes {
-  id        Int      @id @default(autoincrement())
-  nama      String   @unique // Nama tipe faskes (e.g., "Rumah Sakit", "Klinik", "Puskesmas", "Apotek")
-  deskripsi String?  // Deskripsi tambahan
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("tipe_faskes")
-}
-
-// Bukan Leads (Not Leads) model
-model BukanLeads {
-  id        Int      @id @default(autoincrement())
-  nama      String   @unique // Nama kategori bukan leads (e.g., "Spam", "Tidak Tertarik", "Salah Target", "Nomor Tidak Aktif")
-  deskripsi String?  // Deskripsi tambahan
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("bukan_leads")
-}
-
-// Status Leads model
-model StatusLeads {
-  id        Int      @id @default(autoincrement())
-  nama      String   @unique // Nama status leads (e.g., "Baru", "Follow Up", "Qualified", "Proposal", "Deal", "Closed")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("status_leads")
 }

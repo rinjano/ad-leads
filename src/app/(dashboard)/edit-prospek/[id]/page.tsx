@@ -9,6 +9,7 @@ import { useStatusLeads } from '@/hooks/useStatusLeads';
 import { useBukanLeads } from '@/hooks/useBukanLeads';
 import { useLayanan } from '@/hooks/useLayanan';
 import { useTipeFaskes } from '@/hooks/useTipeFaskes';
+import { useProspekById, useUpdateProspek } from '@/hooks/useProspek';
 
 // Data dummy untuk prospek (sama seperti di halaman data-prospek)
 const dummyProspects = [
@@ -201,6 +202,13 @@ export default function EditProspekPage() {
   const { data: bukanLeadsList = [], isLoading: loadingBukanLeads } = useBukanLeads();
   const { data: layananList = [], isLoading: loadingLayanan } = useLayanan();
   const { data: tipeFaskesList = [], isLoading: loadingTipeFaskes } = useTipeFaskes();
+  
+  // Get prospek ID from params
+  const prospekId = parseInt(Array.isArray(params.id) ? params.id[0] : params.id);
+  
+  // Fetch prospek data and update mutation
+  const { data: prospekData, isLoading: loadingProspek } = useProspekById(prospekId);
+  const updateProspekMutation = useUpdateProspek();
 
   // Sort data alphabetically
   const sumberLeadsData = [...sumberLeadsList]
@@ -415,49 +423,54 @@ export default function EditProspekPage() {
     return fallbackData[provinsiName] || [];
   };
 
-  // Load prospect data on page load
+  // Load prospect data from database
   useEffect(() => {
     const loadProspectData = async () => {
-      const idParam = Array.isArray(params.id) ? params.id[0] : params.id;
-      const prospectId = parseInt(idParam);
+      if (!prospekData || loadingProspek) {
+        setLoading(true);
+        return;
+      }
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const prospect = dummyProspects.find(p => p.id === prospectId);
-      
-      if (!prospect) {
+      if (!prospekData) {
         setNotFound(true);
         setLoading(false);
         return;
       }
 
-      // Map prospect data to form format
+      // Find names from IDs for display
+      const sumberLeadsName = sumberLeadsList.find((s: any) => s.id === prospekData.sumberLeadsId)?.nama || '';
+      const kodeAdsName = prospekData.kodeAdsId ? (kodeAdsList.find((k: any) => k.id === prospekData.kodeAdsId)?.kode || '') : '';
+      const statusLeadsName = statusLeadsList.find((s: any) => s.id === prospekData.statusLeadsId)?.nama || '';
+      const bukanLeadsName = prospekData.bukanLeadsId ? (bukanLeadsList.find((b: any) => b.id === prospekData.bukanLeadsId)?.nama || '') : '';
+      const layananName = layananList.find((l: any) => l.id === prospekData.layananAssistId)?.nama || '';
+      const tipeFaskesName = tipeFaskesList.find((t: any) => t.id === prospekData.tipeFaskesId)?.nama || '';
+
+      // Map database data to form format
       setFormData({
-        tanggalProspek: prospect.prospectDate,
-        sumberLeads: prospect.leadSource,
-        kodeAds: prospect.adsCode,
-        idAds: prospect.adsId,
-        namaProspek: prospect.prospectName,
-        noWhatsApp: prospect.whatsappNumber,
-        email: prospect.email,
-        statusLeads: prospect.leadStatus,
-        bukanLeads: prospect.notLeadReason || prospect.bukanLeadsReason,
-        keteranganBukanLeads: prospect.bukanLeadsReason,
-        layananAssist: prospect.assistService,
-        namaFaskes: prospect.faskesName,
-        tipeFaskes: prospect.faskesType,
-        provinsi: prospect.faskesProvinsi,
-        kota: prospect.faskesKota,
-        picLeads: prospect.picLead,
-        keterangan: prospect.keterangan || prospect.description
+        tanggalProspek: prospekData.tanggalProspek ? new Date(prospekData.tanggalProspek).toISOString().split('T')[0] : '',
+        sumberLeads: sumberLeadsName,
+        kodeAds: kodeAdsName,
+        idAds: prospekData.idAds || '',
+        namaProspek: prospekData.namaProspek,
+        noWhatsApp: prospekData.noWhatsApp,
+        email: prospekData.email || '',
+        statusLeads: statusLeadsName,
+        bukanLeads: bukanLeadsName,
+        keteranganBukanLeads: prospekData.keteranganBukanLeads || '',
+        layananAssist: layananName,
+        namaFaskes: prospekData.namaFaskes,
+        tipeFaskes: tipeFaskesName,
+        provinsi: prospekData.provinsi,
+        kota: prospekData.kota,
+        picLeads: prospekData.picLeads,
+        keterangan: prospekData.keterangan || ''
       });
 
       setLoading(false);
     };
 
     loadProspectData();
-  }, [params.id]);
+  }, [prospekData, loadingProspek, sumberLeadsList, kodeAdsList, statusLeadsList, bukanLeadsList, layananList, tipeFaskesList]);
 
   // Handle province change
   useEffect(() => {
@@ -514,11 +527,10 @@ export default function EditProspekPage() {
       picLeads: "PIC Leads"
     };
 
-    // Basic required fields
+    // Basic required fields (email, layananAssist, namaFaskes, tipeFaskes, provinsi, kota sekarang optional)
     const basicRequiredFields = [
-      'tanggalProspek', 'sumberLeads', 'namaProspek', 'noWhatsApp', 'email',
-      'statusLeads', 'layananAssist', 'namaFaskes', 'tipeFaskes', 
-      'provinsi', 'kota', 'picLeads'
+      'tanggalProspek', 'sumberLeads', 'namaProspek', 'noWhatsApp',
+      'statusLeads', 'picLeads'
     ];
 
     // Check basic required fields
@@ -569,7 +581,7 @@ export default function EditProspekPage() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate form
@@ -589,14 +601,22 @@ export default function EditProspekPage() {
     setShowValidationAlert(false);
     setValidationErrors([]);
     
-    // Add form submission logic here
-    console.log("Updated Form Data:", formData);
-    
-    // Set success message in localStorage
-    localStorage.setItem('prospectSuccess', 'Data prospek berhasil diperbarui.');
-    
-    // Navigate back to data prospek page
-    router.push('/data-prospek');
+    try {
+      // Update prospek in database
+      await updateProspekMutation.mutateAsync({
+        id: prospekId,
+        data: formData
+      });
+      
+      // Set success message in localStorage
+      localStorage.setItem('prospectSuccess', 'Data prospek berhasil diperbarui.');
+      
+      // Navigate back to data prospek page
+      router.push('/data-prospek');
+    } catch (error) {
+      console.error('Error updating prospek:', error);
+      alert('Gagal memperbarui prospek. Silakan coba lagi.');
+    }
   };
 
   if (loading) {
@@ -777,7 +797,7 @@ export default function EditProspekPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  E-mail *
+                  E-mail
                 </label>
                 <input
                   type="email"
@@ -785,7 +805,6 @@ export default function EditProspekPage() {
                   onChange={(e) => handleFormDataChange('email', e.target.value)}
                   placeholder="Contoh: user@example.com"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 />
               </div>
 
@@ -850,13 +869,12 @@ export default function EditProspekPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Layanan Assist *
+                  Layanan Assist
                 </label>
                 <select
                   value={formData.layananAssist}
                   onChange={(e) => handleFormDataChange('layananAssist', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 >
                   <option value="">Pilih layanan assist</option>
                   {layananAssistData.map((layanan) => (
@@ -873,7 +891,7 @@ export default function EditProspekPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nama Faskes *
+                  Nama Faskes
                 </label>
                 <input
                   type="text"
@@ -881,19 +899,17 @@ export default function EditProspekPage() {
                   onChange={(e) => handleFormDataChange('namaFaskes', e.target.value)}
                   placeholder="Masukkan nama fasilitas kesehatan"
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipe Faskes *
+                  Tipe Faskes
                 </label>
                 <select
                   value={formData.tipeFaskes}
                   onChange={(e) => handleFormDataChange('tipeFaskes', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 >
                   <option value="">Pilih tipe faskes</option>
                   {tipeFaskesData.map((tipe) => (
@@ -910,13 +926,12 @@ export default function EditProspekPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Provinsi *
+                  Provinsi
                 </label>
                 <select
                   value={formData.provinsi}
                   onChange={(e) => handleFormDataChange('provinsi', e.target.value)}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
                 >
                   <option value="">Pilih provinsi</option>
                   {provinsiData.map((provinsi) => (
@@ -927,7 +942,7 @@ export default function EditProspekPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Kota/Kabupaten *
+                  Kota/Kabupaten
                 </label>
                 <div className="relative">
                   <select
@@ -935,7 +950,6 @@ export default function EditProspekPage() {
                     onChange={(e) => handleFormDataChange('kota', e.target.value)}
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     disabled={!formData.provinsi || loadingKota || kotaError !== ""}
-                    required
                   >
                     <option value="">
                       {!formData.provinsi ? "Pilih provinsi terlebih dahulu" : 
