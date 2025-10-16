@@ -275,7 +275,6 @@ export function BukanLeadsTab() {
                   {bukanLeadsToDelete.deskripsi && (
                     <p className="text-sm text-slate-600 mt-1">{bukanLeadsToDelete.deskripsi}</p>
                   )}
-                  <p className="text-xs text-slate-500 mt-1">ID: {bukanLeadsToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
@@ -345,7 +344,6 @@ export function BukanLeadsTab() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{bukanLeads.nama}</div>
-                          <div className="text-xs text-slate-500">ID: {bukanLeads.id}</div>
                         </div>
                       </div>
                     </TableCell>

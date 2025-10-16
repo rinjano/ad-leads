@@ -245,7 +245,6 @@ export function LayananTab() {
                 <p className="text-slate-900 mb-2">Apakah Anda yakin ingin menghapus layanan ini?</p>
                 <div className="bg-white border border-red-200 rounded-lg p-3">
                   <p className="font-semibold text-slate-900">{layananToDelete.nama}</p>
-                  <p className="text-sm text-slate-600">ID: {layananToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
@@ -315,7 +314,6 @@ export function LayananTab() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{layanan.nama}</div>
-                          <div className="text-sm text-slate-500">ID: {layanan.id}</div>
                         </div>
                       </div>
                     </TableCell>

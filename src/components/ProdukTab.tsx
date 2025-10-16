@@ -208,7 +208,6 @@ export function ProdukTab() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{produk.nama}</div>
-                          <div className="text-xs text-slate-500">ID: {produk.id}</div>
                         </div>
                       </div>
                     </TableCell>
@@ -463,7 +462,6 @@ export function ProdukTab() {
                 <p className="text-slate-900 mb-2">Apakah Anda yakin ingin menghapus produk ini?</p>
                 <div className="bg-white border border-red-200 rounded-lg p-3">
                   <p className="font-semibold text-slate-900">{produkToDelete.nama}</p>
-                  <p className="text-xs text-slate-500 mt-1">ID: {produkToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">

@@ -275,7 +275,6 @@ export function TipeFaskesTab() {
                   {tipeFaskesToDelete.deskripsi && (
                     <p className="text-sm text-slate-600 mt-1">{tipeFaskesToDelete.deskripsi}</p>
                   )}
-                  <p className="text-xs text-slate-500 mt-1">ID: {tipeFaskesToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
@@ -345,7 +344,6 @@ export function TipeFaskesTab() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{tipeFaskes.nama}</div>
-                          <div className="text-xs text-slate-500">ID: {tipeFaskes.id}</div>
                         </div>
                       </div>
                     </TableCell>

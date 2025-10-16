@@ -247,7 +247,6 @@ export function StatusLeadsTab() {
                 <p className="text-slate-900 mb-2">Apakah Anda yakin ingin menghapus status leads ini?</p>
                 <div className="bg-white border border-red-200 rounded-lg p-3">
                   <p className="font-semibold text-slate-900">{statusLeadsToDelete.nama}</p>
-                  <p className="text-xs text-slate-500 mt-1">ID: {statusLeadsToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
@@ -314,7 +313,6 @@ export function StatusLeadsTab() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{statusLeads.nama}</div>
-                          <div className="text-xs text-slate-500">ID: {statusLeads.id}</div>
                         </div>
                       </div>
                     </TableCell>

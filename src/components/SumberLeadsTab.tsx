@@ -275,7 +275,6 @@ export function SumberLeadsTab() {
                   {sumberLeadsToDelete.deskripsi && (
                     <p className="text-sm text-slate-600 mt-1">{sumberLeadsToDelete.deskripsi}</p>
                   )}
-                  <p className="text-xs text-slate-500 mt-1">ID: {sumberLeadsToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
@@ -345,7 +344,6 @@ export function SumberLeadsTab() {
                         </div>
                         <div>
                           <div className="font-semibold text-slate-900">{sumberLeads.nama}</div>
-                          <div className="text-xs text-slate-500">ID: {sumberLeads.id}</div>
                         </div>
                       </div>
                     </TableCell>

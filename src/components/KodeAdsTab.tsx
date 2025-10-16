@@ -288,7 +288,6 @@ export function KodeAdsTab() {
                 <p className="text-slate-900 mb-2">Apakah Anda yakin ingin menghapus kode ads ini?</p>
                 <div className="bg-white border border-red-200 rounded-lg p-3">
                   <p className="font-semibold text-slate-900">{kodeAdsToDelete.kode}</p>
-                  <p className="text-xs text-slate-500 mt-1">ID: {kodeAdsToDelete.id}</p>
                 </div>
               </div>
               <div className="flex gap-3 justify-end">
@@ -358,7 +357,6 @@ export function KodeAdsTab() {
                         </div>
                         <div>
                           <div className="font-mono font-semibold text-slate-900">{kodeAds.kode}</div>
-                          <div className="text-xs text-slate-500">ID: {kodeAds.id}</div>
                         </div>
                       </div>
                     </TableCell>
