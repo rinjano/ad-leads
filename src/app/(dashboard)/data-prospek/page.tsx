@@ -944,6 +944,55 @@ export default function DataProspekPage() {
     });
   };
 
+  // Function untuk transform data konversi dari database ke format UI
+  const transformKonversiToSubscriptions = (konversiDataArray) => {
+    if (!konversiDataArray || !Array.isArray(konversiDataArray) || konversiDataArray.length === 0) {
+      return [];
+    }
+    
+    // Flatten all items from all konversi records
+    const allSubscriptions = [];
+    
+    konversiDataArray.forEach((konversiData) => {
+      if (konversiData.konversi_customer_item && konversiData.konversi_customer_item.length > 0) {
+        konversiData.konversi_customer_item.forEach((item) => {
+          const startDate = new Date(konversiData.tanggalKonversi);
+          let endDate = new Date(startDate);
+          
+          // Calculate end date based on duration
+          if (item.tipeDurasi === 'months') {
+            endDate.setMonth(endDate.getMonth() + item.durasiLangganan);
+          } else if (item.tipeDurasi === 'years') {
+            endDate.setFullYear(endDate.getFullYear() + item.durasiLangganan);
+          }
+          
+          allSubscriptions.push({
+            id: item.id,
+            serviceName: item.layanan?.nama || '-',
+            productName: item.produk?.nama || '-',
+            transactionValue: item.nilaiTransaksi || 0,
+            subscriptionDuration: item.durasiLangganan,
+            durationType: item.tipeDurasi,
+            startDate: startDate.toISOString().split('T')[0],
+            endDate: endDate.toISOString().split('T')[0],
+            conversionDate: konversiData.tanggalKonversi,
+            isRenewal: false
+          });
+        });
+      }
+    });
+    
+    return allSubscriptions;
+  };
+  
+  // Function untuk calculate total LTV dari konversi array
+  const calculateTotalLTV = (konversiDataArray) => {
+    if (!konversiDataArray || !Array.isArray(konversiDataArray)) return 0;
+    return konversiDataArray.reduce((total, konversi) => {
+      return total + (konversi.totalNilaiTransaksi || 0);
+    }, 0);
+  };
+
   // States untuk modal detail customer dan perpanjangan
   const [showCustomerDetailModal, setShowCustomerDetailModal] = useState(false);
   const [showRenewalModal, setShowRenewalModal] = useState(false);
@@ -957,6 +1006,9 @@ export default function DataProspekPage() {
   });
   const [renewalErrors, setRenewalErrors] = useState({});
   const [isProcessingRenewal, setIsProcessingRenewal] = useState(false);
+  
+  // Fetch konversi data for selected customer
+  const { data: customerKonversiData, isLoading: loadingCustomerKonversi } = useKonversiByProspekId(selectedCustomer?.id);
 
   const closeConversionFormModal = () => {
     setShowConversionFormModal(false);
@@ -2263,7 +2315,7 @@ value={filters.customEndDate}
               </div>
 
               {/* Data Customer - Only show if leadStatus is "Customer" */}
-              {selectedProspect.leadStatus === "Customer" && konversiData && (
+              {selectedProspect.leadStatus === "Customer" && konversiData && konversiData.length > 0 && (
                 <div className="bg-gradient-to-r from-emerald-50 to-teal-100 rounded-xl p-6">
                   <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center">
                     <svg className="h-5 w-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2280,7 +2332,7 @@ value={filters.customEndDate}
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 mr-2 text-emerald-600" />
                           <p className="text-slate-900 font-medium">
-                            {konversiData.tanggalKonversi ? new Date(konversiData.tanggalKonversi).toLocaleDateString('id-ID', {
+                            {konversiData[0]?.tanggalKonversi ? new Date(konversiData[0].tanggalKonversi).toLocaleDateString('id-ID', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
@@ -2295,18 +2347,18 @@ value={filters.customEndDate}
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <p className="text-lg font-bold text-emerald-700">
-                            Rp {konversiData.totalNilaiTransaksi ? konversiData.totalNilaiTransaksi.toLocaleString('id-ID') : '0'}
+                            Rp {calculateTotalLTV(konversiData).toLocaleString('id-ID')}
                           </p>
                         </div>
                       </div>
                     </div>
 
                     {/* Layanan & Produk yang Dibeli */}
-                    {konversiData.konversi_customer_item && konversiData.konversi_customer_item.length > 0 && (
+                    {konversiData[0]?.konversi_customer_item && konversiData[0].konversi_customer_item.length > 0 && (
                       <div className="mt-6">
                         <label className="block text-sm font-medium text-slate-600 mb-3">Layanan & Produk yang Dibeli</label>
                         <div className="space-y-3">
-                          {konversiData.konversi_customer_item.map((item, index) => (
+                          {konversiData[0].konversi_customer_item.map((item, index) => (
                             <div key={index} className="bg-white rounded-lg border border-emerald-200 p-4">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
@@ -2341,11 +2393,11 @@ value={filters.customEndDate}
                     )}
 
                     {/* Keterangan */}
-                    {konversiData.keterangan && (
+                    {konversiData[0]?.keterangan && (
                       <div className="mt-4">
                         <label className="block text-sm font-medium text-slate-600 mb-2">Keterangan Konversi</label>
                         <p className="text-slate-900 bg-white px-4 py-3 rounded-lg border border-emerald-200 leading-relaxed">
-                          {konversiData.keterangan}
+                          {konversiData[0].keterangan}
                         </p>
                       </div>
                     )}
@@ -3021,6 +3073,32 @@ value={filters.customEndDate}
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">Informasi Customer</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="text-sm font-medium text-slate-600">Nama Prospek</label>
+                    <p className="text-slate-900 font-semibold">{selectedCustomer.prospectName}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">No WhatsApp</label>
+                    <div className="flex items-center">
+                      <Phone className="h-4 w-4 mr-2 text-green-600" />
+                      <a 
+                        href={`https://wa.me/${selectedCustomer.whatsappNumber.replace(/[^0-9]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-600 hover:text-green-700 font-medium"
+                      >
+                        {selectedCustomer.whatsappNumber}
+                      </a>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">E-mail</label>
+                    <p className="text-slate-900">{selectedCustomer.email || '-'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Layanan Assist</label>
+                    <p className="text-slate-900">{selectedCustomer.assistService || '-'}</p>
+                  </div>
+                  <div>
                     <label className="text-sm font-medium text-slate-600">Nama Faskes</label>
                     <p className="text-slate-900">{selectedCustomer.faskesName}</p>
                   </div>
@@ -3030,13 +3108,27 @@ value={filters.customEndDate}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-600">Lokasi</label>
-                    <p className="text-slate-900">{selectedCustomer.faskesLocation}</p>
+                    <p className="text-slate-900">{selectedCustomer.faskesProvinsi}, {selectedCustomer.faskesKota}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">Tanggal Konversi</label>
+                    <p className="text-slate-900">
+                      {customerKonversiData && customerKonversiData.length > 0 
+                        ? formatDate(customerKonversiData[0].tanggalKonversi) 
+                        : '-'}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-slate-600">Total LTV</label>
                     <p className="text-slate-900 font-semibold text-emerald-600">
-                      {formatRupiah(calculateCustomerLTV(selectedCustomer.conversionData).toString())}
+                      {customerKonversiData && customerKonversiData.length > 0
+                        ? formatRupiah(calculateTotalLTV(customerKonversiData).toString())
+                        : 'Rp 0'}
                     </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-slate-600">PIC Leads</label>
+                    <p className="text-slate-900">{selectedCustomer.picLead || '-'}</p>
                   </div>
                 </div>
               </div>
@@ -3060,78 +3152,144 @@ value={filters.customEndDate}
                   </Button>
                 </div>
 
-                {selectedCustomer.conversionData && selectedCustomer.conversionData.length > 0 ? (
+                {loadingCustomerKonversi ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto"></div>
+                    <p className="text-slate-500 mt-3">Memuat data langganan...</p>
+                  </div>
+                ) : customerKonversiData && customerKonversiData.length > 0 ? (
                   <div className="space-y-4">
-                    {selectedCustomer.conversionData
-                      .sort((a, b) => new Date(b.conversionDate).getTime() - new Date(a.conversionDate).getTime())
-                      .map((subscription, index) => {
-                        const currentStatus = checkSubscriptionStatus(subscription.endDate);
-                        const isExpired = currentStatus === 'expired';
+                    {customerKonversiData
+                      .sort((a, b) => new Date(b.tanggalKonversi).getTime() - new Date(a.tanggalKonversi).getTime())
+                      .map((konversi, konversiIndex) => {
+                        // Check if any item in this konversi is expired
+                        const hasExpiredItem = konversi.konversi_customer_item?.some(item => {
+                          const startDate = new Date(konversi.tanggalKonversi);
+                          let endDate = new Date(startDate);
+                          if (item.tipeDurasi === 'months') {
+                            endDate.setMonth(endDate.getMonth() + item.durasiLangganan);
+                          } else if (item.tipeDurasi === 'years') {
+                            endDate.setFullYear(endDate.getFullYear() + item.durasiLangganan);
+                          }
+                          return checkSubscriptionStatus(endDate.toISOString().split('T')[0]) === 'expired';
+                        });
                         
                         return (
-                          <div key={subscription.id || index} className={`border rounded-lg p-4 ${
-                            isExpired ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'
+                          <div key={konversi.id || konversiIndex} className={`border rounded-lg p-4 ${
+                            hasExpiredItem ? 'border-red-200 bg-red-50' : 'border-emerald-200 bg-emerald-50'
                           }`}>
-                            <div className="flex justify-between items-start">
-                              <div className="flex-1">
+                            <div className="flex justify-between items-start mb-4">
+                              <div>
                                 <div className="flex items-center gap-3 mb-2">
-                                  <h4 className="font-semibold text-slate-900">
-                                    {subscription.serviceName} - {subscription.productName}
+                                  <h4 className="font-semibold text-slate-900 text-lg">
+                                    Transaksi #{konversi.id}
                                   </h4>
                                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                    isExpired 
+                                    hasExpiredItem
                                       ? 'bg-red-100 text-red-700 border border-red-200' 
                                       : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                                   }`}>
-                                    {isExpired ? 'Expired' : 'Aktif'}
+                                    {hasExpiredItem ? 'Expired' : 'Aktif'}
                                   </span>
-                                  {subscription.isRenewal && (
-                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
-                                      Perpanjangan
-                                    </span>
-                                  )}
                                 </div>
-                                
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div className="grid grid-cols-2 gap-4 text-sm">
                                   <div>
-                                    <span className="text-slate-600">Nilai Transaksi:</span>
+                                    <span className="text-slate-600">Tanggal Transaksi:</span>
                                     <p className="font-semibold text-slate-900">
-                                      {formatRupiah(subscription.transactionValue.toString())}
+                                      {formatDate(konversi.tanggalKonversi)}
                                     </p>
                                   </div>
                                   <div>
-                                    <span className="text-slate-600">Durasi:</span>
-                                    <p className="font-semibold text-slate-900">
-                                      {subscription.subscriptionDuration} {subscription.durationType === 'months' ? 'Bulan' : 'Tahun'}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-600">Periode:</span>
-                                    <p className="font-semibold text-slate-900">
-                                      {formatDate(subscription.startDate)} - {formatDate(subscription.endDate)}
-                                    </p>
-                                  </div>
-                                  <div>
-                                    <span className="text-slate-600">Tanggal Order:</span>
-                                    <p className="font-semibold text-slate-900">
-                                      {formatDate(subscription.conversionDate)}
+                                    <span className="text-slate-600">Total Nilai:</span>
+                                    <p className="font-semibold text-emerald-700">
+                                      {formatRupiah(konversi.totalNilaiTransaksi?.toString() || '0')}
                                     </p>
                                   </div>
                                 </div>
                               </div>
-
-                              {isExpired && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => openRenewalModal(selectedCustomer, subscription)}
-                                  className="ml-4 bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-1" />
-                                  Perpanjang Langganan
-                                </Button>
-                              )}
                             </div>
+
+                            {/* List of Items/Layanan in this konversi */}
+                            <div className="space-y-3">
+                              <h5 className="font-medium text-slate-700 text-sm">Layanan & Produk:</h5>
+                              {konversi.konversi_customer_item?.map((item, itemIndex) => {
+                                const startDate = new Date(konversi.tanggalKonversi);
+                                let endDate = new Date(startDate);
+                                if (item.tipeDurasi === 'months') {
+                                  endDate.setMonth(endDate.getMonth() + item.durasiLangganan);
+                                } else if (item.tipeDurasi === 'years') {
+                                  endDate.setFullYear(endDate.getFullYear() + item.durasiLangganan);
+                                }
+                                const isExpired = checkSubscriptionStatus(endDate.toISOString().split('T')[0]) === 'expired';
+
+                                return (
+                                  <div key={item.id || itemIndex} className="bg-white rounded-lg border border-slate-200 p-3">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h6 className="font-medium text-slate-900">
+                                        {item.layanan?.nama || '-'} - {item.produk?.nama || '-'}
+                                      </h6>
+                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                        isExpired
+                                          ? 'bg-red-100 text-red-700' 
+                                          : 'bg-emerald-100 text-emerald-700'
+                                      }`}>
+                                        {isExpired ? 'Expired' : 'Aktif'}
+                                      </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                                      <div>
+                                        <span className="text-slate-500">Nilai:</span>
+                                        <p className="font-semibold text-slate-900">
+                                          {formatRupiah(item.nilaiTransaksi?.toString() || '0')}
+                                        </p>
+                                      </div>
+                                      <div>
+                                        <span className="text-slate-500">Durasi:</span>
+                                        <p className="font-semibold text-slate-900">
+                                          {item.durasiLangganan} {item.tipeDurasi === 'months' ? 'Bulan' : 'Tahun'}
+                                        </p>
+                                      </div>
+                                      <div className="col-span-2">
+                                        <span className="text-slate-500">Periode:</span>
+                                        <p className="font-semibold text-slate-900">
+                                          {formatDate(startDate.toISOString().split('T')[0])} - {formatDate(endDate.toISOString().split('T')[0])}
+                                        </p>
+                                      </div>
+                                    </div>
+                                    {isExpired && (
+                                      <div className="mt-2 pt-2 border-t border-slate-200">
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={() => openRenewalModal(selectedCustomer, {
+                                            id: item.id,
+                                            serviceName: item.layanan?.nama,
+                                            productName: item.produk?.nama,
+                                            transactionValue: item.nilaiTransaksi,
+                                            subscriptionDuration: item.durasiLangganan,
+                                            durationType: item.tipeDurasi,
+                                            startDate: startDate.toISOString().split('T')[0],
+                                            endDate: endDate.toISOString().split('T')[0],
+                                            conversionDate: konversi.tanggalKonversi
+                                          })}
+                                          className="w-full bg-orange-50 border-orange-200 text-orange-700 hover:bg-orange-100"
+                                        >
+                                          <RefreshCw className="h-3 w-3 mr-1" />
+                                          Perpanjang Langganan
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {konversi.keterangan && (
+                              <div className="mt-3 pt-3 border-t border-slate-300">
+                                <span className="text-xs text-slate-500">Keterangan:</span>
+                                <p className="text-sm text-slate-700 mt-1">{konversi.keterangan}</p>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

@@ -34,15 +34,17 @@ export const useKonversiCustomer = () => {
 };
 
 // Fetch konversi customer by prospek ID
-export const useKonversiByProspekId = (prospekId: number) => {
+export const useKonversiByProspekId = (prospekId: number | undefined | null) => {
   return useQuery({
     queryKey: ['konversi-customer', prospekId],
     queryFn: async () => {
+      if (!prospekId) return [];
       const response = await fetch(`/api/konversi-customer?prospekId=${prospekId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch konversi customer');
       }
-      return response.json();
+      const data = await response.json();
+      return data; // Returns array
     },
     enabled: !!prospekId,
     staleTime: 1000 * 60,
