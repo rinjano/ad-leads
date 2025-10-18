@@ -22,12 +22,19 @@ export interface TopItem {
   ctr: string;
 }
 
+export interface KodeAdsItem {
+  name: string;
+  value: number;
+  count: number;
+}
+
 export interface DashboardData {
   stats: DashboardStats;
   trendData: TrendData[];
   topLayanan: TopItem[];
   topKota: TopItem[];
   topCS: TopItem[];
+  kodeAdsData: KodeAdsItem[];
 }
 
 export function useDashboard(filter: string = 'today', startDate?: string, endDate?: string) {

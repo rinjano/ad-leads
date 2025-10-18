@@ -261,6 +261,32 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.leads - a.leads)
       .slice(0, 3);
 
+    // Get kode ads distribution
+    const kodeAdsCount: { [key: string]: number } = {};
+    const prospekWithKodeAds = allProspek.filter(p => p.kodeAdsId !== null);
+    
+    prospekWithKodeAds.forEach(p => {
+      if (p.kodeAdsId) {
+        kodeAdsCount[p.kodeAdsId.toString()] = (kodeAdsCount[p.kodeAdsId.toString()] || 0) + 1;
+      }
+    });
+
+    const kodeAdsList = await prisma.kodeAds.findMany();
+    const totalKodeAdsProspek = prospekWithKodeAds.length;
+    
+    const kodeAdsData = Object.entries(kodeAdsCount)
+      .map(([id, count]) => {
+        const kodeAds = kodeAdsList.find(k => k.id.toString() === id);
+        const percentage = totalKodeAdsProspek > 0 ? ((count / totalKodeAdsProspek) * 100).toFixed(1) : '0.0';
+        return {
+          name: kodeAds?.kode || 'Unknown',
+          value: parseFloat(percentage),
+          count: count,
+        };
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5); // Top 5 kode ads
+
     return NextResponse.json({
       stats: {
         totalProspek,
@@ -275,6 +301,7 @@ export async function GET(request: NextRequest) {
       topLayanan,
       topKota,
       topCS,
+      kodeAdsData,
     });
   } catch (error) {
     console.error('Error fetching dashboard data:', error);

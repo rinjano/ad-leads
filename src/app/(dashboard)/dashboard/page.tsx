@@ -116,32 +116,6 @@ const sumberLeadsData = [
   { name: 'WhatsApp', value: 8, color: '#F59E0B' }
 ]
 
-const kodeAdsData = [
-  { name: 'FB001', value: 28, color: '#3B82F6' },
-  { name: 'GG002', value: 23, color: '#10B981' },
-  { name: 'IG004', value: 19, color: '#8B5CF6' },
-  { name: 'FB003', value: 15, color: '#F59E0B' },
-  { name: 'Others', value: 15, color: '#6B7280' }
-]
-
-const topLayanan = [
-  { name: 'Healthcare Premium', leads: 89, ctr: '28.0%' },
-  { name: 'Medical Equipment', leads: 76, ctr: '25.0%' },
-  { name: 'Consultation Service', leads: 64, ctr: '22.0%' }
-]
-
-const topKota = [
-  { name: 'Jakarta', leads: 145, ctr: '26.2%' },
-  { name: 'Surabaya', leads: 98, ctr: '21.4%' },
-  { name: 'Bandung', leads: 87, ctr: '21.8%' }
-]
-
-const topCS = [
-  { name: 'Sarah Johnson', leads: 89, ctr: '28.0%' },
-  { name: 'Michael Chen', leads: 76, ctr: '25.0%' },
-  { name: 'Lisa Wong', leads: 64, ctr: '22.0%' }
-]
-
 export default function DashboardPage() {
   const { user, appUser, loading, signOut } = useAuth()
   const router = useRouter()
@@ -679,21 +653,33 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
             <div className="space-y-3">
-              {kodeAdsData.map((item, index) => (
-                <div key={index} className="flex items-center space-x-3">
-                  <span className="text-sm font-medium text-gray-700 w-12">{item.name}</span>
-                  <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
-                    <div 
-                      className="h-4 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${item.value}%`, 
-                        backgroundColor: item.color 
-                      }}
-                    ></div>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800 w-8">{item.value}%</span>
+              {dashboardData?.kodeAdsData && dashboardData.kodeAdsData.length > 0 ? (
+                dashboardData.kodeAdsData.map((item, index) => {
+                  const colors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#6B7280'];
+                  const color = colors[index % colors.length];
+                  
+                  return (
+                    <div key={index} className="flex items-center space-x-3">
+                      <span className="text-sm font-medium text-gray-700 w-20">{item.name}</span>
+                      <div className="flex-1 bg-gray-200 rounded-full h-4 relative">
+                        <div 
+                          className="h-4 rounded-full transition-all duration-300"
+                          style={{ 
+                            width: `${item.value}%`, 
+                            backgroundColor: color 
+                          }}
+                        ></div>
+                      </div>
+                      <span className="text-sm font-semibold text-gray-800 w-16 text-right">{item.value}%</span>
+                      <span className="text-xs text-gray-500 w-12 text-right">({item.count})</span>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  Tidak ada data kode ads untuk periode ini
                 </div>
-              ))}
+              )}
             </div>
             </CardContent>
           </Card>
