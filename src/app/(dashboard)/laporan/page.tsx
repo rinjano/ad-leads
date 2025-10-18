@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   FileText, 
   BarChart3, 
@@ -20,7 +20,9 @@ import {
   Eye,
   RefreshCw,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Loader2,
+  AlertTriangle
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,6 +37,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { useSumberLeadsLaporan } from '@/hooks/useSumberLeadsLaporan'
 
 export default function LaporanPage() {
   const [dateRange, setDateRange] = useState('thismonth')
@@ -42,12 +45,28 @@ export default function LaporanPage() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
 
+  // Fetch Sumber Leads data from database
+  const { data: sumberLeadsData, isLoading: sumberLeadsLoading, error: sumberLeadsError, refetch: refetchSumberLeads } = useSumberLeadsLaporan(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
   // Handle date range change
   const handleDateRangeChange = (e) => {
     const value = e.target.value
     setDateRange(value)
     setShowCustomDate(value === 'custom')
   }
+
+  // Refetch data when filter changes
+  useEffect(() => {
+    if (dateRange === 'custom' && customStartDate && customEndDate) {
+      refetchSumberLeads()
+    } else if (dateRange !== 'custom') {
+      refetchSumberLeads()
+    }
+  }, [dateRange, customStartDate, customEndDate, refetchSumberLeads])
   
   // State untuk accordion Kode Ads
   const [expandedAdsCode, setExpandedAdsCode] = useState(null)
@@ -1283,31 +1302,47 @@ export default function LaporanPage() {
 
           {/* Sumber Leads Tab */}
           <TabsContent value="sumber-leads">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Tabel Performance Sumber Leads */}
-              <Card className="bg-white shadow-lg border-slate-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="h-5 w-5 text-blue-600" />
-                    Performance Sumber Leads
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50 border-b-2 border-slate-200">
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Sumber Leads</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Prospek</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Leads</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Customer</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Total Nilai Langganan</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Leads</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Customer</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {processedLeadSources.map((source, index) => (
+            {sumberLeadsLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-slate-600">Memuat data Sumber Leads...</span>
+              </div>
+            ) : sumberLeadsError ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
+                <p className="text-slate-600 mb-4">Gagal memuat data Sumber Leads</p>
+                <Button onClick={() => refetchSumberLeads()} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Coba Lagi
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Tabel Performance Sumber Leads */}
+                <Card className="bg-white shadow-lg border-slate-200">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-blue-600" />
+                      Performance Sumber Leads
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50 border-b-2 border-slate-200">
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Sumber Leads</TableHead>
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Prospek</TableHead>
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Leads</TableHead>
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Customer</TableHead>
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Total Nilai Langganan</TableHead>
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Leads</TableHead>
+                            <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Customer</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {sumberLeadsData && sumberLeadsData.data && sumberLeadsData.data.length > 0 ? (
+                            sumberLeadsData.data.map((source, index) => (
                           <React.Fragment key={source.name}>
                             {/* Main Row */}
                             <TableRow 
@@ -1503,12 +1538,19 @@ export default function LaporanPage() {
                               </TableRow>
                             )}
                           </React.Fragment>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
+                            ))
+                          ) : (
+                            <TableRow>
+                              <TableCell colSpan={7} className="py-8 text-center text-slate-500">
+                                Tidak ada data sumber leads untuk periode ini
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </CardContent>
+                </Card>
 
               {/* Pie Chart Distribusi Sumber Leads */}
               <Card className="bg-white shadow-lg border-slate-200">
@@ -1519,99 +1561,89 @@ export default function LaporanPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* Pie Chart Visual */}
-                  <div className="relative h-64 flex items-center justify-center mb-6">
-                    <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
-                      {(() => {
-                        const totalLeads = processedLeadSources.reduce((sum, source) => sum + source.leads, 0)
-                        let currentOffset = 0
-                        const colors = {
-                          'Facebook Ads': '#3b82f6',
-                          'Google Ads': '#10b981', 
-                          'Organik': '#64748b'
-                        }
+                  {sumberLeadsData && sumberLeadsData.data && sumberLeadsData.data.length > 0 ? (
+                    <>
+                      {/* Pie Chart Visual */}
+                      <div className="relative h-64 flex items-center justify-center mb-6">
+                        <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
+                          {(() => {
+                            const totalLeads = sumberLeadsData.data.reduce((sum, source) => sum + source.leads, 0)
+                            if (totalLeads === 0) return null
+                            
+                            let currentOffset = 0
+                            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+                            
+                            return sumberLeadsData.data.map((source, index) => {
+                              const percentage = (source.leads / totalLeads) * 100
+                              const circumference = 2 * Math.PI * 80
+                              const strokeLength = (percentage / 100) * circumference
+                              const strokeDasharray = `${strokeLength} ${circumference}`
+                              const strokeDashoffset = -currentOffset
+                              currentOffset += strokeLength
+                              
+                              return (
+                                <circle
+                                  key={source.id}
+                                  cx="100"
+                                  cy="100"
+                                  r="80"
+                                  fill="none"
+                                  stroke={colors[index % colors.length]}
+                                  strokeWidth="20"
+                                  strokeDasharray={strokeDasharray}
+                                  strokeDashoffset={strokeDashoffset}
+                                  className="transition-all duration-300 hover:stroke-width-[24]"
+                                />
+                              )
+                            })
+                          })()}
+                        </svg>
                         
-                        return processedLeadSources.map((source, index) => {
-                          const percentage = (source.leads / totalLeads) * 100
-                          const circumference = 2 * Math.PI * 80
-                          const strokeLength = (percentage / 100) * circumference
-                          const strokeDasharray = `${strokeLength} ${circumference}`
-                          const strokeDashoffset = -currentOffset
-                          currentOffset += strokeLength
-                          
-                          return (
-                            <circle
-                              key={source.name}
-                              cx="100"
-                              cy="100"
-                              r="80"
-                              fill="none"
-                              stroke={colors[source.name]}
-                              strokeWidth="20"
-                              strokeDasharray={strokeDasharray}
-                              strokeDashoffset={strokeDashoffset}
-                              className="transition-all duration-300 hover:stroke-width-[24]"
-                            />
-                          )
-                        })
-                      })()}
-                    </svg>
-                    
-                    {/* Center label */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">
-                          {processedLeadSources.reduce((sum, source) => sum + source.leads, 0)}
-                        </p>
-                        <p className="text-sm text-slate-600">Total Leads</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Legend */}
-                  <div className="space-y-3">
-                    {processedLeadSources.map((source, index) => {
-                      const totalLeads = processedLeadSources.reduce((sum, s) => sum + s.leads, 0)
-                      const percentage = ((source.leads / totalLeads) * 100).toFixed(0)
-                      
-                      return (
-                        <div key={source.name} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className={`w-3 h-3 rounded-full ${
-                                source.name === 'Facebook Ads' 
-                                  ? 'bg-blue-500'
-                                  : source.name === 'Google Ads'
-                                  ? 'bg-green-500'
-                                  : source.name === 'Organik'
-                                  ? 'bg-slate-500'
-                                  : 'bg-gray-500'
-                              }`}
-                            ></div>
-                            <span className="text-sm text-slate-700">{source.name}</span>
-                          </div>
-                          <div className="text-right">
-                            <span 
-                              className={`text-sm font-bold ${
-                                source.name === 'Facebook Ads' 
-                                  ? 'text-blue-600'
-                                  : source.name === 'Google Ads'
-                                  ? 'text-green-600'
-                                  : source.name === 'Organik'
-                                  ? 'text-slate-600'
-                                  : 'text-gray-600'
-                              }`}
-                            >
-                              {source.leads} ({percentage}%)
-                            </span>
+                        {/* Center label */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-slate-900">
+                              {sumberLeadsData.data.reduce((sum, source) => sum + source.leads, 0)}
+                            </p>
+                            <p className="text-sm text-slate-600">Total Leads</p>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
+                      </div>
+
+                      {/* Legend */}
+                      <div className="space-y-3">
+                        {sumberLeadsData.data.map((source, index) => {
+                          const totalLeads = sumberLeadsData.data.reduce((sum, s) => sum + s.leads, 0)
+                          const percentage = totalLeads > 0 ? ((source.leads / totalLeads) * 100).toFixed(0) : '0'
+                          const colors = ['blue', 'green', 'orange', 'purple', 'pink', 'cyan', 'lime']
+                          const color = colors[index % colors.length]
+                          
+                          return (
+                            <div key={source.id} className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full bg-${color}-500`}></div>
+                                <span className="text-sm text-slate-700">{source.name}</span>
+                              </div>
+                              <div className="text-right">
+                                <span className={`text-sm font-bold text-${color}-600`}>
+                                  {source.leads} ({percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                      <PieChart className="h-12 w-12 mb-2" />
+                      <p>Tidak ada data untuk ditampilkan</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
+            )}
           </TabsContent>
 
           {/* Kode Ads Tab */}
