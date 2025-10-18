@@ -32,6 +32,7 @@ export default function TambahProspekPage() {
 
   const [formData, setFormData] = useState({
     tanggalProspek: getCurrentDateUTC7(),
+    tanggalJadiLeads: "", // New field
     sumberLeads: "",
     kodeAds: "",
     idAds: "",
@@ -333,6 +334,7 @@ export default function TambahProspekPage() {
     const errors = [];
     const fieldLabels = {
       tanggalProspek: "Tanggal Prospek Chat",
+      tanggalJadiLeads: "Tanggal Prospek jadi Leads",
       sumberLeads: "Sumber Leads",
       kodeAds: "Kode Ads",
       idAds: "ID Ads",
@@ -388,6 +390,13 @@ export default function TambahProspekPage() {
       }
     }
 
+    // Conditional validation for "Leads" status
+    if (formData.statusLeads === "Leads") {
+      if (!formData.tanggalJadiLeads || formData.tanggalJadiLeads.trim() === '') {
+        errors.push(fieldLabels.tanggalJadiLeads);
+      }
+    }
+
     return errors;
   };
 
@@ -430,7 +439,9 @@ export default function TambahProspekPage() {
         ...formData,
         layananAssist: Array.isArray(formData.layananAssist) 
           ? formData.layananAssist.join(', ') 
-          : formData.layananAssist
+          : formData.layananAssist,
+        // Only include tanggalJadiLeads if status is "Leads"
+        tanggalJadiLeads: formData.statusLeads === "Leads" ? formData.tanggalJadiLeads : null
       };
       
       // Submit to database
@@ -502,6 +513,22 @@ export default function TambahProspekPage() {
                   required
                 />
               </div>
+
+              {/* Tanggal Jadi Leads - Only visible when status is "Leads" */}
+              {formData.statusLeads === "Leads" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tanggal Prospek jadi Leads *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.tanggalJadiLeads}
+                    onChange={(e) => handleFormDataChange('tanggalJadiLeads', e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required={formData.statusLeads === "Leads"}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

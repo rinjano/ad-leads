@@ -170,6 +170,7 @@ export default function EditProspekPage() {
 
   const [formData, setFormData] = useState({
     tanggalProspek: "",
+    tanggalJadiLeads: "", // New field
     sumberLeads: "",
     kodeAds: "",
     idAds: "",
@@ -468,6 +469,7 @@ export default function EditProspekPage() {
       // Map database data to form format
       setFormData({
         tanggalProspek: prospekData.tanggalProspek ? new Date(prospekData.tanggalProspek).toISOString().split('T')[0] : '',
+        tanggalJadiLeads: prospekData.tanggalJadiLeads ? new Date(prospekData.tanggalJadiLeads).toISOString().split('T')[0] : '',
         sumberLeads: sumberLeadsName,
         kodeAds: kodeAdsName,
         idAds: prospekData.idAds || '',
@@ -729,6 +731,22 @@ export default function EditProspekPage() {
                   required
                 />
               </div>
+
+              {/* Tanggal Jadi Leads - Only visible when status is "Leads" */}
+              {formData.statusLeads === "Leads" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tanggal Prospek jadi Leads *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.tanggalJadiLeads}
+                    onChange={(e) => handleFormDataChange('tanggalJadiLeads', e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    required={formData.statusLeads === "Leads"}
+                  />
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

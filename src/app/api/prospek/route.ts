@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
 
     const {
       tanggalProspek,
+      tanggalJadiLeads,
       sumberLeads,
       kodeAds,
       idAds,
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
     const newProspek = await prisma.prospek.create({
       data: {
         tanggalProspek: new Date(tanggalProspek),
+        tanggalJadiLeads: tanggalJadiLeads && tanggalJadiLeads.trim() !== '' ? new Date(tanggalJadiLeads) : null,
         sumberLeadsId: sumberLeadsRecord.id,
         kodeAdsId: kodeAdsRecord?.id || null,
         idAds: idAds || null,

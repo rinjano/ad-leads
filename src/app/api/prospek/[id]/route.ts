@@ -59,6 +59,7 @@ export async function PUT(
 
     const {
       tanggalProspek,
+      tanggalJadiLeads,
       sumberLeads,
       kodeAds,
       idAds,
@@ -140,6 +141,7 @@ export async function PUT(
       where: { id: prospekId },
       data: {
         tanggalProspek: new Date(tanggalProspek),
+        tanggalJadiLeads: tanggalJadiLeads && tanggalJadiLeads.trim() !== '' ? new Date(tanggalJadiLeads) : null,
         sumberLeadsId: sumberLeadsRecord.id,
         kodeAdsId: kodeAdsRecord?.id || null,
         idAds: idAds || null,

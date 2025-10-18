@@ -597,6 +597,7 @@ export default function DataProspekPage() {
         id: prospek.id,
         createdDate: new Date(prospek.createdAt).toISOString().split('T')[0],
         prospectDate: new Date(prospek.tanggalProspek).toISOString().split('T')[0],
+        tanggalJadiLeads: prospek.tanggalJadiLeads ? new Date(prospek.tanggalJadiLeads).toISOString().split('T')[0] : null,
         leadSource: sumberLeadsName,
         adsCode: kodeAdsName,
         adsId: prospek.idAds || '',
@@ -1894,6 +1895,12 @@ value={filters.customEndDate}
                   </TableHead>
                   <TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
                     <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-slate-500" />
+                      <span>Tanggal Jadi Leads</span>
+                    </div>
+                  </TableHead>
+                  <TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
+                    <div className="flex items-center gap-2">
                       <Target className="h-4 w-4 text-slate-500" />
                       <span>Sumber Leads</span>
                     </div>
@@ -1971,6 +1978,11 @@ value={filters.customEndDate}
                       </TableCell>
                       <TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
                         <div className="text-slate-700">{prospect.prospectDate}</div>
+                      </TableCell>
+                      <TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
+                        <div className="text-slate-700">
+                          {prospect.tanggalJadiLeads || '-'}
+                        </div>
                       </TableCell>
                       <TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
                         <Badge 
@@ -2264,6 +2276,15 @@ value={filters.customEndDate}
                         <p className="text-slate-900">{selectedProspect.prospectDate}</p>
                       </div>
                     </div>
+                    {selectedProspect.tanggalJadiLeads && (
+                      <div>
+                        <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Jadi Leads</label>
+                        <div className="flex items-center">
+                          <Calendar className="h-4 w-4 mr-2 text-green-500" />
+                          <p className="text-slate-900 font-semibold">{selectedProspect.tanggalJadiLeads}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-4">
                     <div>

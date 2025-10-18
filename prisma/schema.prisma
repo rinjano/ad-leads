@@ -112,6 +112,7 @@ model StatusLeads {
 model Prospek {
   id                   Int                 @id @default(autoincrement())
   tanggalProspek       DateTime
+  tanggalJadiLeads     DateTime?
   sumberLeadsId        Int
   kodeAdsId            Int?
   idAds                String?
