@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,120 +37,12 @@ import {
   CreditCard,
   Shield,
   UsersRound,
-  Receipt
+  Receipt,
+  Loader2
 } from "lucide-react";
+import { useAdsSpend } from "@/hooks/useAdsSpend";
 
-// Data dummy prospek untuk mengambil kombinasi kode ads dan channel iklan
-const dummyProspects = [
-  // Prospek dari Google Ads
-  {
-    id: 1,
-    adsCode: "202",
-    leadSource: "Google Ads",
-    leadStatus: "Leads"
-  },
-  {
-    id: 2,
-    adsCode: "202",
-    leadSource: "Google Ads",
-    leadStatus: "Qualified"
-  },
-  {
-    id: 3,
-    adsCode: "202", 
-    leadSource: "Meta Ads",
-    leadStatus: "Leads"
-  },
-  {
-    id: 4,
-    adsCode: "202",
-    leadSource: "Meta Ads", 
-    leadStatus: "Dihubungi"
-  },
-  {
-    id: 5,
-    adsCode: "305",
-    leadSource: "Facebook Ads",
-    leadStatus: "Prospek"
-  },
-  {
-    id: 6,
-    adsCode: "305",
-    leadSource: "Instagram Ads",
-    leadStatus: "Leads"
-  },
-  {
-    id: 7,
-    adsCode: "501",
-    leadSource: "LinkedIn Ads", 
-    leadStatus: "Follow Up"
-  },
-  // Prospek bukan dari iklan (tidak akan muncul di Ads Spend)
-  {
-    id: 8,
-    adsCode: "999",
-    leadSource: "Referral",
-    leadStatus: "Leads"
-  },
-  {
-    id: 9,
-    adsCode: "888",
-    leadSource: "Website",
-    leadStatus: "Qualified"
-  },
-  {
-    id: 10,
-    adsCode: "777",
-    leadSource: "WhatsApp",
-    leadStatus: "Bukan Leads"
-  }
-];
-
-// Fungsi untuk mengidentifikasi apakah sumber leads adalah iklan
-const isAdsChannel = (leadSource) => {
-  return leadSource && leadSource.toLowerCase().includes('ads');
-};
-
-// Fungsi untuk mendapatkan kombinasi unik Kode Ads dan Channel dari data prospek
-// Hanya sumber leads yang mengandung kata "ads" yang dianggap sebagai channel iklan
-const getAdsChannelCombinations = (prospects) => {
-  const combinations = prospects
-    .filter(p => p.adsCode && isAdsChannel(p.leadSource)) // Filter hanya yang iklan
-    .map(p => ({
-      adsCode: p.adsCode,
-      channel: p.leadSource,
-      key: `${p.adsCode}_${p.leadSource}` // Unique identifier
-    }));
-
-  // Deduplikasi berdasarkan kombinasi unik
-  const uniqueCombinations = combinations.filter((combo, index, array) => 
-    index === array.findIndex(c => c.key === combo.key)
-  );
-
-  console.log('🎯 Kombinasi Kode Ads + Channel yang valid:', uniqueCombinations);
-  console.log('📊 Total prospek dianalisis:', prospects.length);
-  console.log('🚫 Prospek non-iklan diabaikan:', prospects.filter(p => !isAdsChannel(p.leadSource)).length);
-  
-  return uniqueCombinations;
-};
-
-// Fungsi untuk menghitung statistik per kombinasi Kode Ads dan Channel
-const calculateChannelStats = (adsCode, channel, prospects) => {
-  const channelProspects = prospects.filter(p => 
-    p.adsCode === adsCode && p.leadSource === channel
-  );
-  const totalProspek = channelProspects.length;
-  
-  // Hitung leads berdasarkan status yang dianggap sebagai "leads" 
-  const leadStatuses = ["Leads", "Qualified", "Follow Up", "Dihubungi"];
-  const totalLeads = channelProspects.filter(p => leadStatuses.includes(p.leadStatus)).length;
-  
-  return { totalProspek, totalLeads };
-};
-
-// Data sekarang dihasilkan secara otomatis dari kombinasi Kode Ads + Channel yang ada di data prospek
-
-// Data bulan sebelumnya untuk perbandingan
+// Data bulan sebelumnya untuk perbandingan (hardcoded untuk demo)
 const previousMonthData = {
   totalProspek: 680,
   totalLeads: 185,
@@ -159,101 +51,90 @@ const previousMonthData = {
   sisaBudget: 6800000,
   avgCostPerLead: 44324,
   avgCTRLeads: 27.2,
-  // Data tambahan untuk kolom baru
   totalCustomer: 125,
   avgCostPerCustomer: 65600,
-  totalNilaiLangganan: 28750000, // Total nilai langganan bulan lalu
+  totalNilaiLangganan: 28750000,
   avgROI: 182.1
 };
 
 export default function AdsSpendPage() {
-  // 🎯 LOGIKA UTAMA: Buat tabel berdasarkan kombinasi Kode Ads + Channel dari data prospek iklan
-  // ========================================================================================================
-  // 1. Ambil semua kombinasi unik Kode Ads + Channel dari data prospek (hanya yang mengandung "ads")
-  const adsChannelCombinations = getAdsChannelCombinations(dummyProspects);
-  
-  // 2. Buat data ads spend berdasarkan kombinasi yang valid
-  const initialAdsSpendData = adsChannelCombinations.map((combo, index) => {
-    const channelStats = calculateChannelStats(combo.adsCode, combo.channel, dummyProspects);
-    
-    const budget = 5000000; // Default budget untuk demo
-    const budgetSpent = Math.floor(Math.random() * budget * 0.8); // Random spent untuk demo
-    
-    // Data tambahan untuk kolom baru
-    const jumlahCustomer = Math.floor(channelStats.totalLeads * (0.6 + Math.random() * 0.3)); // 60-90% dari leads menjadi customer
-    const totalAdsSpend = budgetSpent; // Total Ads Spend sama dengan Budget Spent
-    const costPerCustomer = jumlahCustomer > 0 ? totalAdsSpend / jumlahCustomer : 0; // Cost Per Customer = Total Ads Spend / Jumlah Customer
-    // Total Nilai Langganan = total value dari semua transaksi langganan customer dari kode ads ini
-    const totalNilaiLangganan = jumlahCustomer * (costPerCustomer * (3 + Math.random() * 2.5)); // 3x - 5.5x dari cost per customer sebagai total value
-    const roi = costPerCustomer > 0 ? ((totalNilaiLangganan / jumlahCustomer - costPerCustomer) / costPerCustomer) * 100 : 0; // ROI = ((Avg Revenue per Customer - Cost Per Customer) / Cost Per Customer) * 100
-    
-    return {
-      id: index + 1,
-      kodeAds: combo.adsCode,
-      channel: combo.channel,
-      budget: budget,
-      budgetSpent: budgetSpent,
-      sisaBudget: budget - budgetSpent, // Calculated: Sisa Budget = Budget - Budget Spent
-      prospek: channelStats.totalProspek,
-      leads: channelStats.totalLeads,
-      costPerLead: channelStats.totalLeads > 0 ? (budgetSpent / channelStats.totalLeads) : 0, // Cost Per Lead = Budget Spent / Leads
-      ctrLeads: parseFloat(channelStats.totalProspek > 0 ? ((channelStats.totalLeads / channelStats.totalProspek) * 100).toFixed(2) : "0"), // CTR Leads = (Leads / Prospek) * 100
-      // Kolom baru untuk analytics
-      jumlahCustomer: jumlahCustomer,
-      totalAdsSpend: totalAdsSpend,
-      costPerCustomer: costPerCustomer,
-      totalNilaiLangganan: totalNilaiLangganan,
-      roi: roi,
-      lastEditBy: "System Auto",
-      lastEditDate: new Date().toISOString(),
-      budgetHistory: [
-        { date: "2024-09-01", amount: budget, note: `Budget awal ${combo.channel}`, addedBy: "System Auto" }
-      ],
-      spentHistory: budgetSpent > 0 ? [
-        { date: new Date().toISOString(), amount: budgetSpent, previousAmount: 0, updatedBy: "System Auto", note: `Initial spent ${combo.channel}` }
-      ] : []
-    };
-  });
-  
-  console.log('📈 Total kombinasi Kode Ads + Channel ditemukan:', adsChannelCombinations.length);
-  console.log('✅ Baris tabel yang akan ditampilkan:', initialAdsSpendData.length);
-  
-  // Detail untuk debugging
-  initialAdsSpendData.forEach(ads => {
-    console.log(`📊 ${ads.kodeAds} (${ads.channel}): ${ads.prospek} prospek, ${ads.leads} leads, CTR: ${ads.ctrLeads}%`);
-  });
-  
-  const [adsSpendData, setAdsSpendData] = useState(initialAdsSpendData);
-  const [filteredData, setFilteredData] = useState(initialAdsSpendData);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedKodeAds, setSelectedKodeAds] = useState("");
-  const [selectedChannel, setSelectedChannel] = useState("");
-  
   // Filter waktu states
   const [showTimeFilter, setShowTimeFilter] = useState(false);
-  const [timeFilterType, setTimeFilterType] = useState("current-month"); // current-month, custom, all-time
+  const [timeFilterType, setTimeFilterType] = useState("current-month");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   
+  // Search and filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedKodeAds, setSelectedKodeAds] = useState("");
+  const [selectedChannel, setSelectedChannel] = useState("");
+  const [selectedLayanan, setSelectedLayanan] = useState("");
+  const [layananList, setLayananList] = useState<any[]>([]);
+  
   // Modal states
   const [showAddBudgetModal, setShowAddBudgetModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showUpdateBudgetSpentModal, setShowUpdateBudgetSpentModal] = useState(false);
-  const [selectedAds, setSelectedAds] = useState(null);
+  const [selectedAds, setSelectedAds] = useState<any>(null);
   const [newBudgetAmount, setNewBudgetAmount] = useState("");
   const [newBudgetNote, setNewBudgetNote] = useState("");
   const [newBudgetSpent, setNewBudgetSpent] = useState("");
   const [includePPN, setIncludePPN] = useState(false);
+  const [currentDate, setCurrentDate] = useState("");
 
-
-
-  // Filter berdasarkan search term dan kode ads
+  // Set current date on client side only
   useEffect(() => {
+    setCurrentDate(new Date().toLocaleDateString("id-ID"));
+  }, []);
+
+  // Fetch layanan data from API
+  useEffect(() => {
+    const fetchLayanan = async () => {
+      try {
+        const response = await fetch('/api/layanan');
+        const data = await response.json();
+        if (data.success) {
+          setLayananList(data.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching layanan:', error);
+      }
+    };
+    fetchLayanan();
+  }, []);
+
+  // Fetch ads spend data from API
+  const { data: adsSpendResponse, isLoading, error, refetch } = useAdsSpend(
+    timeFilterType === 'year-month' ? 'year-month' : timeFilterType,
+    timeFilterType === 'year-month' ? selectedYear : undefined,
+    timeFilterType === 'year-month' ? selectedMonth : undefined,
+    timeFilterType === 'custom' ? customStartDate : undefined,
+    timeFilterType === 'custom' ? customEndDate : undefined
+  );
+
+  const adsSpendData = adsSpendResponse?.data || [];
+  const totals = adsSpendResponse?.totals || {
+    totalProspek: 0,
+    totalLeads: 0,
+    totalBudget: 0,
+    totalAdsSpend: 0,
+    sisaBudget: 0,
+    avgCostPerLead: 0,
+    avgCTRLeads: 0,
+    totalCustomer: 0,
+    avgCostPerCustomer: 0,
+    totalNilaiLangganan: 0,
+    avgROI: 0,
+  };
+
+  // Filter data based on search term and selected filters using useMemo
+  const filteredData = useMemo(() => {
+    if (!adsSpendData || adsSpendData.length === 0) return [];
     let filtered = adsSpendData;
     
-    // Filter by search term (cari di kode ads, channel, atau customer count)
+    // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(ads =>
         ads.kodeAds.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -274,32 +155,15 @@ export default function AdsSpendPage() {
       filtered = filtered.filter(ads => ads.channel === selectedChannel);
     }
     
-    setFilteredData(filtered);
-  }, [searchTerm, selectedKodeAds, selectedChannel, adsSpendData]);
-
-  // Calculate totals
-  const calculateTotals = () => {
-    const totalProspek = filteredData.reduce((sum, ads) => sum + ads.prospek, 0);
-    const totalLeads = filteredData.reduce((sum, ads) => sum + ads.leads, 0);
-    const totalBudget = filteredData.reduce((sum, ads) => sum + ads.budget, 0);
-    const totalAdsSpend = filteredData.reduce((sum, ads) => sum + ads.totalAdsSpend, 0);
-    const sisaBudget = totalBudget - totalAdsSpend;
-    const avgCostPerLead = totalLeads > 0 ? totalAdsSpend / totalLeads : 0;
-    const avgCTRLeads = totalProspek > 0 ? (totalLeads / totalProspek) * 100 : 0;
+    // Filter by selected layanan
+    if (selectedLayanan) {
+      filtered = filtered.filter(ads => 
+        ads.layanan && ads.layanan.toLowerCase().includes(selectedLayanan.toLowerCase())
+      );
+    }
     
-    // Totals untuk kolom baru
-    const totalCustomer = filteredData.reduce((sum, ads) => sum + ads.jumlahCustomer, 0);
-    const avgCostPerCustomer = totalCustomer > 0 ? totalAdsSpend / totalCustomer : 0;
-    const totalNilaiLangganan = filteredData.reduce((sum, ads) => sum + ads.totalNilaiLangganan, 0);
-    const avgROI = filteredData.length > 0 ? filteredData.reduce((sum, ads) => sum + ads.roi, 0) / filteredData.length : 0;
-
-    return { 
-      totalProspek, totalLeads, totalBudget, totalAdsSpend, sisaBudget, avgCostPerLead, avgCTRLeads,
-      totalCustomer, avgCostPerCustomer, totalNilaiLangganan, avgROI
-    };
-  };
-
-  const totals = calculateTotals();
+    return filtered;
+  }, [searchTerm, selectedKodeAds, selectedChannel, selectedLayanan, adsSpendData]);
 
   // Calculate percentage changes
   const prospekChange = previousMonthData.totalProspek > 0 
@@ -386,102 +250,167 @@ export default function AdsSpendPage() {
   };
 
   // Handle add budget
-  const handleAddBudget = (ads) => {
+  const handleAddBudget = (ads: any) => {
     setSelectedAds(ads);
     setShowAddBudgetModal(true);
   };
 
-  const submitAddBudget = () => {
+  const submitAddBudget = async () => {
     if (!newBudgetAmount || !selectedAds) return;
-    
-    const currentUser = "Admin Didit"; // This should come from auth context in real app
-    const currentDateTime = new Date().toISOString();
-    
-    const updatedData = adsSpendData.map(ads => {
-      if (ads.id === selectedAds.id) {
-        const newBudgetHistory = [...ads.budgetHistory, {
-          date: new Date().toISOString().split('T')[0],
-          amount: parseInt(newBudgetAmount),
-          note: newBudgetNote || "Penambahan budget",
-          addedBy: currentUser
-        }];
-        
-        return {
-          ...ads,
-          budget: ads.budget + parseInt(newBudgetAmount),
-          budgetHistory: newBudgetHistory,
-          lastEditBy: currentUser,
-          lastEditDate: currentDateTime
-        };
+
+    try {
+      // Get current periode (YYYY-MM)
+      const now = new Date();
+      const periode = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      // Hitung total budget baru (budget lama + budget baru yang ditambahkan)
+      // Pastikan convert ke number untuk menghindari string concatenation
+      const currentBudget = parseFloat(selectedAds.budget) || 0;
+      const additionalBudget = parseFloat(newBudgetAmount) || 0;
+      const totalBudget = currentBudget + additionalBudget;
+
+      console.log('Debug Add Budget:', {
+        currentBudget,
+        additionalBudget,
+        totalBudget,
+        selectedAds_budget: selectedAds.budget,
+        typeof_currentBudget: typeof currentBudget,
+        typeof_additionalBudget: typeof additionalBudget
+      });
+
+      const response = await fetch('/api/ads-budget', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          kodeAdsId: selectedAds.kodeAdsId,
+          sumberLeadsId: selectedAds.sumberLeadsId,
+          budget: totalBudget, // Kirim total budget (lama + baru)
+          spent: selectedAds.totalAdsSpend || 0,
+          periode,
+          createdBy: 'Admin', // TODO: Get from session
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`Budget berhasil ditambahkan! Total budget sekarang: Rp ${totalBudget.toLocaleString('id-ID')}`);
+        setShowAddBudgetModal(false);
+        setNewBudgetAmount("");
+        setNewBudgetNote("");
+        setSelectedAds(null);
+        // Refresh data
+        refetch();
+      } else {
+        alert(`Gagal menambahkan budget: ${data.error}`);
       }
-      return ads;
-    });
-    
-    setAdsSpendData(updatedData);
-    setShowAddBudgetModal(false);
-    setNewBudgetAmount("");
-    setNewBudgetNote("");
-    setSelectedAds(null);
+    } catch (error) {
+      console.error('Error adding budget:', error);
+      alert('Terjadi kesalahan saat menambahkan budget');
+    }
   };
 
   // Handle detail modal
-  const handleShowDetail = (ads) => {
+  const handleShowDetail = (ads: any) => {
     setSelectedAds(ads);
     setShowDetailModal(true);
   };
 
   // Handle update budget spent
-  const handleUpdateBudgetSpent = (ads) => {
+  const handleUpdateBudgetSpent = (ads: any) => {
     setSelectedAds(ads);
-    setNewBudgetSpent(ads.budgetSpent.toString());
+    setNewBudgetSpent(ads.totalAdsSpent?.toString() || '0');
     setIncludePPN(false);
     setShowUpdateBudgetSpentModal(true);
   };
 
-  const submitUpdateBudgetSpent = () => {
+  const submitUpdateBudgetSpent = async () => {
     if (!newBudgetSpent || !selectedAds) return;
-    
-    const currentUser = "Admin Didit"; // This should come from auth context in real app
-    const currentDateTime = new Date().toISOString();
-    
-    let finalBudgetSpent = parseInt(newBudgetSpent);
-    
-    // Add PPN 11% if checkbox is checked
-    if (includePPN) {
-      finalBudgetSpent = finalBudgetSpent + (finalBudgetSpent * 0.11);
-    }
-    
-    const updatedData = adsSpendData.map(ads => {
-      if (ads.id === selectedAds.id) {
-        const newSpentHistory = [...ads.spentHistory, {
-          date: currentDateTime,
-          amount: finalBudgetSpent,
-          previousAmount: ads.budgetSpent,
-          updatedBy: currentUser,
-          note: includePPN ? "Update spent dengan PPN 11%" : "Update budget spent"
-        }];
-        
-        return {
-          ...ads,
-          budgetSpent: finalBudgetSpent,
-          spentHistory: newSpentHistory,
-          lastEditBy: currentUser,
-          lastEditDate: currentDateTime
-        };
+
+    try {
+      // Hitung total spending baru (spending lama + spending baru yang ditambahkan)
+      // Pastikan convert ke number untuk menghindari string concatenation
+      const currentSpent = parseFloat(selectedAds.budgetSpent) || 0;
+      const additionalSpent = parseFloat(newBudgetSpent) || 0;
+      
+      // Calculate dengan PPN jika diperlukan (PPN hanya untuk tambahan, bukan total)
+      const additionalWithPPN = includePPN ? additionalSpent + (additionalSpent * 0.11) : additionalSpent;
+      const totalSpent = currentSpent + additionalWithPPN;
+
+      console.log('Debug Update Spending:', {
+        currentSpent,
+        additionalSpent,
+        additionalWithPPN,
+        totalSpent,
+        includePPN,
+        selectedAds_budgetSpent: selectedAds.budgetSpent,
+        typeof_currentSpent: typeof currentSpent,
+        typeof_additionalSpent: typeof additionalSpent
+      });
+
+      // If budgetId exists, update. Otherwise create new budget entry
+      const url = selectedAds.budgetId ? '/api/ads-budget' : '/api/ads-budget';
+      const method = selectedAds.budgetId ? 'PUT' : 'POST';
+
+      // Get current periode (YYYY-MM)
+      const now = new Date();
+      const periode = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+      const body = selectedAds.budgetId
+        ? {
+            id: selectedAds.budgetId,
+            spent: totalSpent,  // Kirim total spending (lama + baru)
+            updatedBy: 'Admin', // TODO: Get from session
+          }
+        : {
+            kodeAdsId: selectedAds.kodeAdsId,
+            sumberLeadsId: selectedAds.sumberLeadsId,
+            budget: parseFloat(selectedAds.budget) || 0,
+            spent: totalSpent,  // Kirim total spending (lama + baru)
+            periode,
+            createdBy: 'Admin', // TODO: Get from session
+          };
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const ppnInfo = includePPN ? ' (termasuk PPN 11%)' : '';
+        alert(`Spending berhasil ditambahkan${ppnInfo}! Total spending sekarang: Rp ${totalSpent.toLocaleString('id-ID')}`);
+        setShowUpdateBudgetSpentModal(false);
+        setNewBudgetSpent("");
+        setIncludePPN(false);
+        setSelectedAds(null);
+        // Refresh data
+        refetch();
+      } else {
+        alert(`Gagal mengupdate budget spent: ${data.error}`);
       }
-      return ads;
-    });
-    
-    setAdsSpendData(updatedData);
-    setShowUpdateBudgetSpentModal(false);
-    setNewBudgetSpent("");
-    setIncludePPN(false);
-    setSelectedAds(null);
+    } catch (error) {
+      console.error('Error updating budget spent:', error);
+      alert('Terjadi kesalahan saat mengupdate budget spent');
+    }
   };
 
-  // Get unique kode ads and channels for filter
-  const uniqueKodeAds = [...new Set(adsSpendData.map(ads => ads.kodeAds))];
-  const uniqueChannels = [...new Set(adsSpendData.map(ads => ads.channel))];
+  // Get unique kode ads and channels for filter using useMemo
+  const uniqueKodeAds = useMemo(() => {
+    if (!adsSpendData || adsSpendData.length === 0) return [];
+    return [...new Set(adsSpendData.map(ads => ads.kodeAds))];
+  }, [adsSpendData]);
+
+  const uniqueChannels = useMemo(() => {
+    if (!adsSpendData || adsSpendData.length === 0) return [];
+    return [...new Set(adsSpendData.map(ads => ads.channel))];
+  }, [adsSpendData]);
 
   // Generate year options (last 3 years and next 2 years)
   const currentYear = new Date().getFullYear();
@@ -496,7 +425,45 @@ export default function AdsSpendPage() {
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
   ];
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card className="bg-white shadow-lg border-slate-200">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-slate-500">
+              <Loader2 className="h-12 w-12 animate-spin text-purple-600 mb-4" />
+              <p className="text-lg font-medium">Memuat data ads spend...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
+  // Error state
+  if (error) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card className="bg-white shadow-lg border-slate-200">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-red-500">
+              <X className="h-12 w-12 mb-4" />
+              <p className="text-lg font-medium mb-2">Gagal memuat data ads spend</p>
+              <p className="text-sm text-slate-600">{error instanceof Error ? error.message : 'Unknown error'}</p>
+              <Button
+                onClick={() => refetch()}
+                className="mt-4"
+                variant="outline"
+              >
+                Coba Lagi
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -990,6 +957,17 @@ export default function AdsSpendPage() {
             <option key={channel} value={channel}>{channel}</option>
           ))}
         </select>
+        
+        <select
+          value={selectedLayanan}
+          onChange={(e) => setSelectedLayanan(e.target.value)}
+          className="px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:border-blue-500 focus:ring-blue-500 min-w-[150px]"
+        >
+          <option value="">Semua Layanan</option>
+          {layananList.map((layanan: any) => (
+            <option key={layanan.id} value={layanan.nama}>{layanan.nama}</option>
+          ))}
+        </select>
       </div>
 
 
@@ -1185,13 +1163,13 @@ export default function AdsSpendPage() {
                       </TableCell>
                       <TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0 text-center">
                         <div className="flex flex-col items-center">
-                          <div className="font-medium text-slate-900 text-sm">{ads.lastEditBy}</div>
+                          <div className="font-medium text-slate-900 text-sm">{ads.lastEditBy || 'System'}</div>
                           <div className="text-xs text-slate-500 mt-1">
-                            {new Date(ads.lastEditDate).toLocaleDateString("id-ID", {
+                            {ads.lastEditDate ? new Date(ads.lastEditDate).toLocaleDateString("id-ID", {
                               day: "2-digit",
                               month: "short",
                               year: "numeric"
-                            })}
+                            }) : '-'}
                           </div>
                         </div>
                       </TableCell>
@@ -1259,9 +1237,9 @@ export default function AdsSpendPage() {
                 Menampilkan {filteredData.length} kombinasi
               </span>
             </div>
-            {filteredData.length > 0 && (
+            {filteredData.length > 0 && currentDate && (
               <div className="text-slate-500">
-                Terakhir diperbarui: {new Date().toLocaleDateString("id-ID")}
+                Terakhir diperbarui: {currentDate}
               </div>
             )}
           </div>
@@ -1307,18 +1285,18 @@ export default function AdsSpendPage() {
                 <div className="text-sm">
                   <div className="flex justify-between mb-2">
                     <span className="text-slate-600">Budget Saat Ini:</span>
-                    <span className="font-medium">{formatCurrency(selectedAds.budget)}</span>
+                    <span className="font-medium">{formatCurrency(parseFloat(selectedAds.budget) || 0)}</span>
                   </div>
                   <div className="flex justify-between mb-2">
                     <span className="text-slate-600">Tambahan:</span>
                     <span className="font-medium text-blue-600">
-                      {newBudgetAmount ? formatCurrency(parseInt(newBudgetAmount)) : formatCurrency(0)}
+                      {newBudgetAmount ? formatCurrency(parseFloat(newBudgetAmount)) : formatCurrency(0)}
                     </span>
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-slate-600 font-medium">Total Budget Baru:</span>
                     <span className="font-bold text-green-600">
-                      {formatCurrency(selectedAds.budget + (parseInt(newBudgetAmount) || 0))}
+                      {formatCurrency((parseFloat(selectedAds.budget) || 0) + (parseFloat(newBudgetAmount) || 0))}
                     </span>
                   </div>
                 </div>
@@ -1354,15 +1332,15 @@ export default function AdsSpendPage() {
       {showUpdateBudgetSpentModal && selectedAds && (
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white shadow-lg w-full max-w-md border-slate-200 rounded-2xl">
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-slate-200 p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Update Budget Spent</h3>
+            <div className="bg-gradient-to-r from-red-50 to-rose-50 border-b border-slate-200 p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-1">Tambah Spending</h3>
               <p className="text-sm text-slate-600">Kode Ads: {selectedAds.kodeAds}</p>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Budget Spent Baru <span className="text-red-500">*</span>
+                  Spending Tambahan <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
@@ -1392,34 +1370,33 @@ export default function AdsSpendPage() {
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="text-sm">
                   <div className="flex justify-between mb-2">
-                    <span className="text-slate-600">Budget Spent Saat Ini:</span>
-                    <span className="font-medium">{formatCurrency(selectedAds.budgetSpent)}</span>
+                    <span className="text-slate-600">Spending Saat Ini:</span>
+                    <span className="font-medium">{formatCurrency(parseFloat(selectedAds.budgetSpent) || 0)}</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-slate-600">Budget Spent Baru:</span>
+                    <span className="text-slate-600">Spending Tambahan:</span>
                     <span className="font-medium text-green-600">
-                      {newBudgetSpent ? formatCurrency(parseInt(newBudgetSpent)) : formatCurrency(0)}
+                      {newBudgetSpent ? formatCurrency(parseFloat(newBudgetSpent)) : formatCurrency(0)}
                     </span>
                   </div>
                   {includePPN && newBudgetSpent && (
                     <div className="flex justify-between mb-2">
                       <span className="text-slate-600">PPN 11%:</span>
                       <span className="font-medium text-orange-600">
-                        {formatCurrency(parseInt(newBudgetSpent) * 0.11)}
+                        {formatCurrency(parseFloat(newBudgetSpent) * 0.11)}
                       </span>
                     </div>
                   )}
                   <div className="flex justify-between border-t pt-2">
-                    <span className="text-slate-600 font-medium">Total Final:</span>
-                    <span className="font-bold text-blue-600">
-                      {newBudgetSpent 
-                        ? formatCurrency(
-                            includePPN 
-                              ? parseInt(newBudgetSpent) + (parseInt(newBudgetSpent) * 0.11)
-                              : parseInt(newBudgetSpent)
-                          )
-                        : formatCurrency(0)
-                      }
+                    <span className="text-slate-600 font-medium">Total Spending Baru:</span>
+                    <span className="font-bold text-red-600">
+                      {(() => {
+                        const currentSpent = parseFloat(selectedAds.budgetSpent) || 0;
+                        const additionalSpent = parseFloat(newBudgetSpent) || 0;
+                        const additionalWithPPN = includePPN ? additionalSpent + (additionalSpent * 0.11) : additionalSpent;
+                        const totalSpent = currentSpent + additionalWithPPN;
+                        return formatCurrency(totalSpent);
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -1442,9 +1419,9 @@ export default function AdsSpendPage() {
               <Button 
                 onClick={submitUpdateBudgetSpent}
                 disabled={!newBudgetSpent}
-                className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
+                className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white"
               >
-                Update Budget Spent
+                Tambah Spending
               </Button>
             </div>
           </div>
@@ -1535,7 +1512,8 @@ export default function AdsSpendPage() {
                       History Tambah Budget
                     </h5>
                     <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {selectedAds.budgetHistory.map((history, index) => (
+                      {selectedAds?.budgetHistory && selectedAds.budgetHistory.length > 0 ? (
+                        selectedAds.budgetHistory.map((history, index) => (
                         <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-green-100 hover:shadow-md transition-shadow">
                           <div className="space-y-3">
                             {/* Header with note and amount */}
@@ -1573,7 +1551,13 @@ export default function AdsSpendPage() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      ))
+                      ) : (
+                        <div className="bg-white p-6 rounded-lg text-center text-slate-500">
+                          <Wallet className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                          <p className="text-sm">Belum ada riwayat penambahan budget</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1586,7 +1570,8 @@ export default function AdsSpendPage() {
                       History Update Spent
                     </h5>
                     <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                      {selectedAds.spentHistory.map((history, index) => (
+                      {selectedAds?.spentHistory && selectedAds.spentHistory.length > 0 ? (
+                        selectedAds.spentHistory.map((history, index) => (
                         <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-red-100 hover:shadow-md transition-shadow">
                           <div className="space-y-3">
                             {/* Main content */}
@@ -1621,7 +1606,13 @@ export default function AdsSpendPage() {
                             </div>
                           </div>
                         </div>
-                      ))}
+                      ))
+                      ) : (
+                        <div className="bg-white p-6 rounded-lg text-center text-slate-500">
+                          <Calculator className="h-8 w-8 mx-auto mb-2 text-slate-400" />
+                          <p className="text-sm">Belum ada riwayat update spending</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

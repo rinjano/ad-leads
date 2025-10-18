@@ -54,8 +54,26 @@ model KodeAds {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   userKodeAds UserKodeAds[]
+  adsBudget   AdsBudget[]
 
   @@map("kode_ads")
+}
+
+model AdsBudget {
+  id            Int      @id @default(autoincrement())
+  kodeAdsId     Int
+  sumberLeadsId Int
+  budget        Float    @default(0)
+  spent         Float    @default(0)
+  periode       String   // Format: "YYYY-MM" untuk tracking bulanan
+  createdBy     String?
+  updatedBy     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  kodeAds       KodeAds  @relation(fields: [kodeAdsId], references: [id], onDelete: Cascade)
+
+  @@unique([kodeAdsId, sumberLeadsId, periode])
+  @@map("ads_budget")
 }
 
 model UserKodeAds {
