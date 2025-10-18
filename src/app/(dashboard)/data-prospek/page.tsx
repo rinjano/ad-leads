@@ -386,6 +386,68 @@ const getStatusBadge = (status) => {
   );
 };
 
+// Function to render layanan badges with different colors based on layanan name
+const renderLayananBadges = (layananString: string) => {
+  if (!layananString || layananString.trim() === '') {
+    return <span className="text-xs text-slate-400 italic">Tidak ada layanan</span>;
+  }
+
+  // Split by comma to get individual layanan
+  const layananArray = layananString.split(',').map(l => l.trim()).filter(l => l);
+  
+  // Function to get color class based on layanan name
+  const getColorClass = (layananName: string) => {
+    const normalizedName = layananName.toLowerCase().trim();
+    
+    // Specific color mapping
+    if (normalizedName === 'rme') {
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    }
+    if (normalizedName === 'solmet') {
+      return 'bg-pink-50 text-pink-700 border-pink-200';
+    }
+    if (normalizedName.includes('rekam medis')) {
+      return 'bg-blue-50 text-blue-700 border-blue-200';
+    }
+    
+    // Default color palette for other layanan
+    const colorMap: { [key: string]: string } = {
+      'apotek': 'bg-green-50 text-green-700 border-green-200',
+      'laboratorium': 'bg-purple-50 text-purple-700 border-purple-200',
+      'radiologi': 'bg-orange-50 text-orange-700 border-orange-200',
+      'farmasi': 'bg-cyan-50 text-cyan-700 border-cyan-200',
+      'keuangan': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      'inventory': 'bg-teal-50 text-teal-700 border-teal-200',
+      'kasir': 'bg-yellow-50 text-yellow-700 border-yellow-200',
+      'emr': 'bg-blue-50 text-blue-700 border-blue-200',
+    };
+    
+    // Check if layanan name matches any in the map
+    for (const [key, color] of Object.entries(colorMap)) {
+      if (normalizedName.includes(key)) {
+        return color;
+      }
+    }
+    
+    // Default color if not found
+    return 'bg-slate-50 text-slate-700 border-slate-200';
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {layananArray.map((layanan, index) => (
+        <Badge 
+          key={index}
+          variant="secondary" 
+          className={`text-xs rounded-full font-medium px-3 py-1 ${getColorClass(layanan)}`}
+        >
+          {layanan}
+        </Badge>
+      ))}
+    </div>
+  );
+};
+
 // Data dummy untuk kode ads
 const dummyAdsCodes = [
   { id: 1, code: "IGM-2024-001", name: "Instagram Marketing Campaign Q4", createdAt: "2025-09-01", updatedAt: "2025-09-27" },
@@ -1950,12 +2012,7 @@ value={filters.customEndDate}
                         {getStatusBadge(prospect.leadStatus)}
                       </TableCell>
                       <TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
-                        <Badge 
-                          variant="secondary" 
-                          className="text-xs rounded-full bg-blue-50 text-blue-700 border-blue-200 font-medium px-3 py-1"
-                        >
-                          {prospect.assistService}
-                        </Badge>
+                        {renderLayananBadges(prospect.assistService)}
                       </TableCell>
                       <TableCell className="py-4 px-6 border-r border-slate-100 last:border-r-0">
                         <div className="font-medium text-slate-900">{prospect.faskesName}</div>
@@ -2259,10 +2316,8 @@ value={filters.customEndDate}
                   </div>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Layanan Assist</label>
-                      <Badge variant="secondary" className="text-sm font-medium bg-blue-100 text-blue-700 border-blue-200">
-                        {selectedProspect.assistService}
-                      </Badge>
+                      <label className="block text-sm font-medium text-slate-600 mb-2">Layanan Assist</label>
+                      {renderLayananBadges(selectedProspect.assistService)}
                     </div>
                     {selectedProspect.leadStatus === "Bukan Leads" && selectedProspect.bukanLeadsReason && (
                       <div>
