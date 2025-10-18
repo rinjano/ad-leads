@@ -177,11 +177,22 @@ export async function GET(request: NextRequest) {
         },
       }) : 0;
 
+      // Count customers (prospek with konversi_customer)
+      const dayCustomers = await prisma.konversi_customer.count({
+        where: {
+          tanggalKonversi: {
+            gte: startOfDay,
+            lt: endOfDay,
+          },
+        },
+      });
+
       const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
       trendData.push({
         day: dayNames[date.getDay()],
         prospek: dayProspek,
         leads: dayLeads,
+        customer: dayCustomers,
       });
     }
 

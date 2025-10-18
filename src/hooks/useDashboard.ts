@@ -14,6 +14,7 @@ export interface TrendData {
   day: string;
   prospek: number;
   leads: number;
+  customer: number;
 }
 
 export interface TopItem {

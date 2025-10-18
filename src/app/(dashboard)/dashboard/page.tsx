@@ -411,6 +411,15 @@ export default function DashboardPage() {
                       ></div>
                       <span className="text-xs text-gray-500 mt-1">{item.leads}</span>
                     </div>
+
+                    {/* Customer Bar */}
+                    <div className="w-full flex flex-col items-center">
+                      <div 
+                        className="w-6 bg-gradient-to-t from-purple-500 to-purple-400 rounded-t"
+                        style={{ height: `${Math.min((item.customer / 20) * 60, 60)}px` }}
+                      ></div>
+                      <span className="text-xs text-gray-500 mt-1">{item.customer}</span>
+                    </div>
                   </div>
                   <span className="text-xs font-medium text-gray-600">{item.day}</span>
                 </div>
@@ -424,6 +433,10 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-2">
                 <div className="w-3 h-3 bg-green-500 rounded"></div>
                 <span className="text-sm text-gray-600">Leads</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-purple-500 rounded"></div>
+                <span className="text-sm text-gray-600">Customer</span>
               </div>
             </div>
             </CardContent>
