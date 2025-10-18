@@ -109,11 +109,12 @@ export async function PUT(
     }
 
     // Optional fields - only fetch if provided and not empty
-    let layananRecord = null;
+    // layananAssist now supports comma-separated values for multi-select
+    let layananAssistValue = null;
     if (layananAssist && layananAssist.trim() !== '') {
-      layananRecord = await prisma.layanan.findFirst({
-        where: { nama: layananAssist },
-      });
+      // layananAssist is already comma-separated string from frontend
+      // We store it directly as string (nama, not ID)
+      layananAssistValue = layananAssist;
     }
 
     let tipeFaskesRecord = null;
@@ -129,10 +130,7 @@ export async function PUT(
     if (!statusLeadsRecord) {
       return NextResponse.json({ error: 'Status Leads not found' }, { status: 400 });
     }
-    // Only validate if field was provided and not empty
-    if (layananAssist && layananAssist.trim() !== '' && !layananRecord) {
-      return NextResponse.json({ error: 'Layanan not found' }, { status: 400 });
-    }
+    // Tipe Faskes validation only if provided
     if (tipeFaskes && tipeFaskes.trim() !== '' && !tipeFaskesRecord) {
       return NextResponse.json({ error: 'Tipe Faskes not found' }, { status: 400 });
     }
@@ -151,7 +149,7 @@ export async function PUT(
         statusLeadsId: statusLeadsRecord.id,
         bukanLeadsId: bukanLeadsRecord?.id || null,
         keteranganBukanLeads: keteranganBukanLeads || null,
-        layananAssistId: layananRecord?.id || null,
+        layananAssistId: layananAssistValue || null,
         namaFaskes: namaFaskes && namaFaskes.trim() !== '' ? namaFaskes : null,
         tipeFaskesId: tipeFaskesRecord?.id || null,
         provinsi: provinsi && provinsi.trim() !== '' ? provinsi : null,

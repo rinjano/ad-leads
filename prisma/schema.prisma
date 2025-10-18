@@ -121,7 +121,7 @@ model Prospek {
   statusLeadsId        Int
   bukanLeadsId         Int?
   keteranganBukanLeads String?
-  layananAssistId      Int?
+  layananAssistId      String?
   namaFaskes           String?
   tipeFaskesId         Int?
   provinsi             String?

@@ -508,7 +508,27 @@ export default function DataProspekPage() {
       const kodeAdsName = prospek.kodeAdsId ? (kodeAdsList.find((k: any) => k.id === prospek.kodeAdsId)?.kode || '') : '';
       const statusLeadsName = statusLeadsList.find((s: any) => s.id === prospek.statusLeadsId)?.nama || '';
       const bukanLeadsName = prospek.bukanLeadsId ? (bukanLeadsList.find((b: any) => b.id === prospek.bukanLeadsId)?.nama || '') : '';
-      const layananName = layananList.find((l: any) => l.id === prospek.layananAssistId)?.nama || '';
+      
+      // Parse layananAssistId - support both old format (ID) and new format (comma-separated names)
+      let layananName = '';
+      if (prospek.layananAssistId) {
+        const layananValue = prospek.layananAssistId;
+        
+        // Check if it's a number (old format - ID)
+        if (typeof layananValue === 'number' || !isNaN(parseInt(layananValue))) {
+          const foundLayanan = layananList.find((l: any) => l.id === parseInt(layananValue));
+          layananName = foundLayanan?.nama || '';
+        } 
+        // Check if it's comma-separated string (new format - names)
+        else if (typeof layananValue === 'string' && layananValue.includes(',')) {
+          layananName = layananValue; // Already in display format
+        }
+        // Single name string (new format - single name)
+        else if (typeof layananValue === 'string') {
+          layananName = layananValue;
+        }
+      }
+      
       const tipeFaskesName = tipeFaskesList.find((t: any) => t.id === prospek.tipeFaskesId)?.nama || '';
       
       return {
@@ -1807,7 +1827,7 @@ value={filters.customEndDate}
                   <TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-slate-500" />
-                      <span>Tanggal Prospek</span>
+                      <span>Tanggal Prospek Chat</span>
                     </div>
                   </TableHead>
                   <TableHead className="py-4 px-6 text-left font-semibold text-slate-700 border-r border-slate-200 last:border-r-0">
@@ -2181,7 +2201,7 @@ value={filters.customEndDate}
                       </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Prospek Masuk</label>
+                      <label className="block text-sm font-medium text-slate-600 mb-1">Tanggal Prospek Chat</label>
                       <div className="flex items-center">
                         <Calendar className="h-4 w-4 mr-2 text-slate-500" />
                         <p className="text-slate-900">{selectedProspect.prospectDate}</p>

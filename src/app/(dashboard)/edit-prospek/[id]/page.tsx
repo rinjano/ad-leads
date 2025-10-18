@@ -10,6 +10,7 @@ import { useBukanLeads } from '@/hooks/useBukanLeads';
 import { useLayanan } from '@/hooks/useLayanan';
 import { useTipeFaskes } from '@/hooks/useTipeFaskes';
 import { useProspekById, useUpdateProspek } from '@/hooks/useProspek';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 
 // Data dummy untuk prospek (sama seperti di halaman data-prospek)
 const dummyProspects = [
@@ -178,7 +179,7 @@ export default function EditProspekPage() {
     statusLeads: "",
     bukanLeads: "",
     keteranganBukanLeads: "",
-    layananAssist: "",
+    layananAssist: [] as string[],
     namaFaskes: "",
     tipeFaskes: "",
     provinsi: "",
@@ -442,7 +443,26 @@ export default function EditProspekPage() {
       const kodeAdsName = prospekData.kodeAdsId ? (kodeAdsList.find((k: any) => k.id === prospekData.kodeAdsId)?.kode || '') : '';
       const statusLeadsName = statusLeadsList.find((s: any) => s.id === prospekData.statusLeadsId)?.nama || '';
       const bukanLeadsName = prospekData.bukanLeadsId ? (bukanLeadsList.find((b: any) => b.id === prospekData.bukanLeadsId)?.nama || '') : '';
-      const layananName = layananList.find((l: any) => l.id === prospekData.layananAssistId)?.nama || '';
+      
+      // Parse layananAssistId - handle both old (integer ID) and new (comma-separated names) format
+      let layananNames: string[] = [];
+      const layananValue = prospekData.layananAssistId;
+      if (layananValue) {
+        if (typeof layananValue === 'number' || !isNaN(parseInt(layananValue))) {
+          // Old format: integer ID - lookup in layananList
+          const foundLayanan = layananList.find((l: any) => l.id === parseInt(layananValue));
+          if (foundLayanan?.nama) {
+            layananNames = [foundLayanan.nama];
+          }
+        } else if (typeof layananValue === 'string' && layananValue.includes(',')) {
+          // New format: comma-separated names
+          layananNames = layananValue.split(',').map((name: string) => name.trim()).filter((name: string) => name);
+        } else if (typeof layananValue === 'string') {
+          // New format: single name
+          layananNames = [layananValue];
+        }
+      }
+      
       const tipeFaskesName = tipeFaskesList.find((t: any) => t.id === prospekData.tipeFaskesId)?.nama || '';
 
       // Map database data to form format
@@ -457,7 +477,7 @@ export default function EditProspekPage() {
         statusLeads: statusLeadsName,
         bukanLeads: bukanLeadsName,
         keteranganBukanLeads: prospekData.keteranganBukanLeads || '',
-        layananAssist: layananName,
+        layananAssist: layananNames,
         namaFaskes: prospekData.namaFaskes,
         tipeFaskes: tipeFaskesName,
         provinsi: prospekData.provinsi,
@@ -602,10 +622,18 @@ export default function EditProspekPage() {
     setValidationErrors([]);
     
     try {
+      // Convert array to comma-separated string for layananAssist
+      const dataToSubmit = {
+        ...formData,
+        layananAssist: Array.isArray(formData.layananAssist) 
+          ? formData.layananAssist.join(', ')
+          : formData.layananAssist
+      };
+      
       // Update prospek in database
       await updateProspekMutation.mutateAsync({
         id: prospekId,
-        data: formData
+        data: dataToSubmit
       });
       
       // Set success message in localStorage
@@ -871,16 +899,13 @@ export default function EditProspekPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Layanan Assist
                 </label>
-                <select
+                <MultiSelectDropdown
+                  options={layananAssistData}
                   value={formData.layananAssist}
-                  onChange={(e) => handleFormDataChange('layananAssist', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Pilih layanan assist</option>
-                  {layananAssistData.map((layanan) => (
-                    <option key={layanan} value={layanan}>{layanan}</option>
-                  ))}
-                </select>
+                  onChange={(selected) => handleFormDataChange('layananAssist', selected)}
+                  placeholder="Pilih layanan assist (bisa pilih lebih dari satu)"
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

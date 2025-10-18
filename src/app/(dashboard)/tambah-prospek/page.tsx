@@ -10,6 +10,7 @@ import { useBukanLeads } from '@/hooks/useBukanLeads';
 import { useLayanan } from '@/hooks/useLayanan';
 import { useTipeFaskes } from '@/hooks/useTipeFaskes';
 import { useCreateProspek } from '@/hooks/useProspek';
+import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 
 export default function TambahProspekPage() {
   const router = useRouter();
@@ -40,7 +41,7 @@ export default function TambahProspekPage() {
     statusLeads: "",
     bukanLeads: "",
     keteranganBukanLeads: "",
-    layananAssist: "",
+    layananAssist: [] as string[], // Changed to array for multi-select
     namaFaskes: "",
     tipeFaskes: "",
     provinsi: "",
@@ -331,7 +332,7 @@ export default function TambahProspekPage() {
   const validateForm = () => {
     const errors = [];
     const fieldLabels = {
-      tanggalProspek: "Tanggal Prospek Masuk",
+      tanggalProspek: "Tanggal Prospek Chat",
       sumberLeads: "Sumber Leads",
       kodeAds: "Kode Ads",
       idAds: "ID Ads",
@@ -424,8 +425,16 @@ export default function TambahProspekPage() {
     setValidationErrors([]);
     
     try {
+      // Convert layananAssist array to comma-separated string for backend
+      const dataToSubmit = {
+        ...formData,
+        layananAssist: Array.isArray(formData.layananAssist) 
+          ? formData.layananAssist.join(', ') 
+          : formData.layananAssist
+      };
+      
       // Submit to database
-      await createProspekMutation.mutateAsync(formData);
+      await createProspekMutation.mutateAsync(dataToSubmit);
       
       // Set success message in localStorage
       localStorage.setItem('prospectSuccess', 'Data prospek berhasil ditambahkan.');
@@ -483,7 +492,7 @@ export default function TambahProspekPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tanggal Prospek Masuk *
+                  Tanggal Prospek Chat *
                 </label>
                 <input
                   type="date"
@@ -663,16 +672,13 @@ export default function TambahProspekPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Layanan Assist
                 </label>
-                <select
+                <MultiSelectDropdown
+                  options={layananAssistData}
                   value={formData.layananAssist}
-                  onChange={(e) => handleFormDataChange('layananAssist', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="">Pilih layanan assist</option>
-                  {layananAssistData.map((layanan) => (
-                    <option key={layanan} value={layanan}>{layanan}</option>
-                  ))}
-                </select>
+                  onChange={(selected) => handleFormDataChange('layananAssist', selected)}
+                  placeholder="Pilih layanan assist"
+                  className="w-full"
+                />
               </div>
             </div>
           </div>
