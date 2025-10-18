@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,243 +37,21 @@ import {
   Search,
   X,
   Eye,
-  FileText
+  FileText,
+  Loader2
 } from 'lucide-react'
-
-// Interface untuk data LTV & Retensi
-interface CustomerLTVData {
-  id: string
-  name: string
-  email: string
-  phone: string
-  subscriptions: SubscriptionData[]
-  totalLTV: number
-  totalDuration: number
-  renewalCount: number
-  firstSubscriptionDate: string
-  lastSubscriptionDate: string
-  overallStatus: 'active' | 'expired' | 'mixed'
-}
-
-interface SubscriptionData {
-  id: string
-  serviceId: string
-  serviceName: string
-  productId: string
-  productName: string
-  transactionValue: number
-  subscriptionDuration: number
-  durationType: 'months' | 'years'
-  conversionDate: string
-  startDate: string
-  endDate: string
-  status: 'active' | 'expired'
-  isRenewal: boolean
-  originalSubscriptionId?: string
-}
-
-// Data dummy customer dengan subscription lengkap (dari halaman data-prospek)
-const dummyCustomerLTVData: CustomerLTVData[] = [
-  {
-    id: '1',
-    name: 'PT Teknologi Maju',
-    email: 'admin@teknologimaju.com',
-    phone: '021-1234567',
-    totalLTV: 15000000,
-    totalDuration: 30,
-    renewalCount: 2,
-    firstSubscriptionDate: '2024-01-15',
-    lastSubscriptionDate: '2025-01-15',
-    overallStatus: 'active',
-    subscriptions: [
-      {
-        id: 'sub-1-1',
-        serviceId: '1',
-        serviceName: 'Digital Marketing',
-        productId: '1',
-        productName: 'SEO Premium',
-        transactionValue: 5000000,
-        subscriptionDuration: 12,
-        durationType: 'months',
-        conversionDate: '2024-01-15',
-        startDate: '2024-01-15',
-        endDate: '2025-01-15',
-        status: 'active',
-        isRenewal: false
-      },
-      {
-        id: 'sub-1-2',
-        serviceId: '2',
-        serviceName: 'Web Development',
-        productId: '3',
-        productName: 'Website Corporate',
-        transactionValue: 8000000,
-        subscriptionDuration: 6,
-        durationType: 'months',
-        conversionDate: '2024-03-20',
-        startDate: '2024-03-20',
-        endDate: '2024-09-20',
-        status: 'expired',
-        isRenewal: false
-      },
-      {
-        id: 'sub-1-3',
-        serviceId: '2',
-        serviceName: 'Web Development',
-        productId: '3',
-        productName: 'Website Corporate',
-        transactionValue: 2000000,
-        subscriptionDuration: 6,
-        durationType: 'months',
-        conversionDate: '2024-09-25',
-        startDate: '2024-09-25',
-        endDate: '2025-03-25',
-        status: 'active',
-        isRenewal: true,
-        originalSubscriptionId: 'sub-1-2'
-      }
-    ]
-  },
-  {
-    id: '2',
-    name: 'CV Digital Sukses',
-    email: 'info@digitalsukses.co.id',
-    phone: '021-9876543',
-    totalLTV: 7500000,
-    totalDuration: 18,
-    renewalCount: 1,
-    firstSubscriptionDate: '2024-02-10',
-    lastSubscriptionDate: '2024-08-10',
-    overallStatus: 'expired',
-    subscriptions: [
-      {
-        id: 'sub-2-1',
-        serviceId: '1',
-        serviceName: 'Digital Marketing',
-        productId: '2',
-        productName: 'Social Media Management',
-        transactionValue: 3000000,
-        subscriptionDuration: 6,
-        durationType: 'months',
-        conversionDate: '2024-02-10',
-        startDate: '2024-02-10',
-        endDate: '2024-08-10',
-        status: 'expired',
-        isRenewal: false
-      },
-      {
-        id: 'sub-2-2',
-        serviceId: '3',
-        serviceName: 'Sistem Informasi',
-        productId: '5',
-        productName: 'ERP Basic',
-        transactionValue: 4500000,
-        subscriptionDuration: 12,
-        durationType: 'months',
-        conversionDate: '2024-04-15',
-        startDate: '2024-04-15',
-        endDate: '2025-04-15',
-        status: 'active',
-        isRenewal: false
-      }
-    ]
-  },
-  {
-    id: '3',
-    name: 'Startup Inovasi',
-    email: 'hello@startupinovasi.id',
-    phone: '021-5551234',
-    totalLTV: 12000000,
-    totalDuration: 24,
-    renewalCount: 3,
-    firstSubscriptionDate: '2023-12-01',
-    lastSubscriptionDate: '2024-12-01',
-    overallStatus: 'active',
-    subscriptions: [
-      {
-        id: 'sub-3-1',
-        serviceId: '1',
-        serviceName: 'Digital Marketing',
-        productId: '1',
-        productName: 'SEO Premium',
-        transactionValue: 3000000,
-        subscriptionDuration: 6,
-        durationType: 'months',
-        conversionDate: '2023-12-01',
-        startDate: '2023-12-01',
-        endDate: '2024-06-01',
-        status: 'expired',
-        isRenewal: false
-      },
-      {
-        id: 'sub-3-2',
-        serviceId: '1',
-        serviceName: 'Digital Marketing',
-        productId: '1',
-        productName: 'SEO Premium',
-        transactionValue: 3000000,
-        subscriptionDuration: 6,
-        durationType: 'months',
-        conversionDate: '2024-06-05',
-        startDate: '2024-06-05',
-        endDate: '2024-12-05',
-        status: 'expired',
-        isRenewal: true,
-        originalSubscriptionId: 'sub-3-1'
-      },
-      {
-        id: 'sub-3-3',
-        serviceId: '1',
-        serviceName: 'Digital Marketing',
-        productId: '1',
-        productName: 'SEO Premium',
-        transactionValue: 3500000,
-        subscriptionDuration: 12,
-        durationType: 'months',
-        conversionDate: '2024-12-01',
-        startDate: '2024-12-01',
-        endDate: '2025-12-01',
-        status: 'active',
-        isRenewal: true,
-        originalSubscriptionId: 'sub-3-2'
-      },
-      {
-        id: 'sub-3-4',
-        serviceId: '2',
-        serviceName: 'Web Development',
-        productId: '4',
-        productName: 'Landing Page',
-        transactionValue: 2500000,
-        subscriptionDuration: 6,
-        durationType: 'months',
-        conversionDate: '2024-08-15',
-        startDate: '2024-08-15',
-        endDate: '2025-02-15',
-        status: 'active',
-        isRenewal: false
-      }
-    ]
-  }
-]
-
-// Master data untuk filter
-const masterServices = [
-  { id: '1', name: 'Digital Marketing' },
-  { id: '2', name: 'Web Development' },
-  { id: '3', name: 'Sistem Informasi' }
-]
-
-const masterProducts = [
-  { id: '1', name: 'SEO Premium', serviceId: '1' },
-  { id: '2', name: 'Social Media Management', serviceId: '1' },
-  { id: '3', name: 'Website Corporate', serviceId: '2' },
-  { id: '4', name: 'Landing Page', serviceId: '2' },
-  { id: '5', name: 'ERP Basic', serviceId: '3' }
-]
+import { useLTVRetensi, CustomerLTVData, SubscriptionData } from '@/hooks/useLTVRetensi'
+import { useLayanan } from '@/hooks/useLayanan'
+import { useProduk } from '@/hooks/useProduk'
 
 export default function LTVRetensiPage() {
-  const [customerData, setCustomerData] = useState<CustomerLTVData[]>(dummyCustomerLTVData)
-  const [filteredData, setFilteredData] = useState<CustomerLTVData[]>(dummyCustomerLTVData)
+  // Fetch data from API
+  const { data: ltvData = [], isLoading: loadingLTV, error: errorLTV } = useLTVRetensi()
+  const { data: layananList = [], isLoading: loadingLayanan } = useLayanan()
+  const { data: produkList = [], isLoading: loadingProduk } = useProduk()
+
+  const [customerData, setCustomerData] = useState<CustomerLTVData[]>([])
+  const [filteredData, setFilteredData] = useState<CustomerLTVData[]>([])
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
   
   // Search and pagination states
@@ -299,6 +77,29 @@ export default function LTVRetensiPage() {
     status: 'all'
   })
 
+  // Master data dari database
+  const masterServices = React.useMemo(() => {
+    return layananList.map((layanan: any) => ({
+      id: layanan.id.toString(),
+      name: layanan.nama
+    })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [layananList]);
+
+  const masterProducts = React.useMemo(() => {
+    return produkList.map((produk: any) => ({
+      id: produk.id.toString(),
+      name: produk.nama,
+      serviceId: produk.layananId?.toString() || ''
+    })).sort((a: any, b: any) => a.name.localeCompare(b.name));
+  }, [produkList]);
+
+  // Update customerData when API data loads
+  useEffect(() => {
+    if (ltvData && ltvData.length > 0) {
+      setCustomerData(ltvData)
+    }
+  }, [ltvData])
+
   // Helper functions
   const formatRupiah = (amount: number) => {
     return new Intl.NumberFormat('id-ID', {
@@ -308,8 +109,9 @@ export default function LTVRetensiPage() {
     }).format(amount)
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString
+    return date.toLocaleDateString('id-ID', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
@@ -389,14 +191,14 @@ export default function LTVRetensiPage() {
     // Service filter
     if (appliedFilters.service !== 'all') {
       filtered = filtered.filter(customer =>
-        customer.subscriptions.some(sub => sub.serviceId === appliedFilters.service)
+        customer.subscriptions.some(sub => sub.serviceId.toString() === appliedFilters.service)
       )
     }
 
     // Product filter
     if (appliedFilters.product !== 'all') {
       filtered = filtered.filter(customer =>
-        customer.subscriptions.some(sub => sub.productId === appliedFilters.product)
+        customer.subscriptions.some(sub => sub.productId.toString() === appliedFilters.product)
       )
     }
 
@@ -446,6 +248,77 @@ export default function LTVRetensiPage() {
   useEffect(() => {
     setCurrentPage(1)
   }, [searchTerm, itemsPerPage, appliedFilters])
+
+  // Show loading state
+  if (loadingLTV || loadingLayanan || loadingProduk) {
+    return (
+      <div className="space-y-6 p-6">
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-blue-100">
+          <CardHeader>
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold text-slate-900">LTV & Retensi Customer</CardTitle>
+                <CardDescription className="text-slate-600">
+                  Analisis nilai customer dan tingkat retensi pelanggan
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-16">
+              <Loader2 className="h-12 w-12 text-blue-600 animate-spin mb-4" />
+              <p className="text-slate-600">Memuat data LTV & Retensi...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (errorLTV) {
+    return (
+      <div className="space-y-6 p-6">
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-blue-100">
+          <CardHeader>
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-blue-500 rounded-xl flex items-center justify-center">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold text-slate-900">LTV & Retensi Customer</CardTitle>
+                <CardDescription className="text-slate-600">
+                  Analisis nilai customer dan tingkat retensi pelanggan
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+        
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <X className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900 mb-1">Gagal Memuat Data</h3>
+              <p className="text-slate-500 mb-4">Terjadi kesalahan saat memuat data LTV & Retensi</p>
+              <Button onClick={() => window.location.reload()} variant="outline">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Muat Ulang
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6 p-6">

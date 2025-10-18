@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { 
   Users, Calendar, Target, Search, Bell,
   TrendingUp, PieChart, BarChart3, Award, MapPin,
-  AlertTriangle, Shield
+  AlertTriangle, Shield, Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { useEffect, useState } from 'react'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { useDashboard } from '@/hooks/useDashboard'
 
 
 
@@ -151,11 +152,27 @@ export default function DashboardPage() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
 
+  // Fetch dashboard data
+  const { data: dashboardData, isLoading: loadingDashboard, error: errorDashboard, refetch } = useDashboard(
+    selectedFilter,
+    customStartDate,
+    customEndDate
+  )
+
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login')
     }
   }, [user, loading, router])
+
+  // Refetch when filter changes
+  useEffect(() => {
+    if (selectedFilter === 'custom' && customStartDate && customEndDate) {
+      refetch()
+    } else if (selectedFilter !== 'custom') {
+      refetch()
+    }
+  }, [selectedFilter, customStartDate, customEndDate, refetch])
 
   // Handle filter change
   const handleFilterChange = (e) => {
@@ -169,10 +186,13 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
-  if (loading) {
+  if (loading || loadingDashboard) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <div className="text-lg">Loading...</div>
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <div className="text-lg">Loading dashboard...</div>
+        </div>
       </div>
     )
   }
@@ -181,12 +201,81 @@ export default function DashboardPage() {
     return null
   }
 
+  if (errorDashboard) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">Gagal memuat data dashboard</p>
+          <Button onClick={() => refetch()}>Coba Lagi</Button>
+        </div>
+      </div>
+    )
+  }
+
   const userEmail = user.email || 'user@example.com'
   const getEmailUsername = (email) => {
     const atIndex = email.indexOf('@')
     return atIndex > -1 ? email.substring(0, atIndex) : 'user'
   }
   const userName = appUser?.name || user.user_metadata?.full_name || getEmailUsername(userEmail)
+
+  // Prepare stats cards with database data
+  const stats = dashboardData?.stats
+  const trendData = dashboardData?.trendData || []
+  const topLayanan = dashboardData?.topLayanan || []
+  const topKota = dashboardData?.topKota || []
+  const topCS = dashboardData?.topCS || []
+
+  const statsCards = [
+    { 
+      title: 'Prospek Hari Ini', 
+      value: stats?.totalProspek.toString() || '0', 
+      change: stats?.prospekChange || '+0%',
+      trend: parseFloat(stats?.prospekChange || '0') > 0 ? 'up' : parseFloat(stats?.prospekChange || '0') < 0 ? 'down' : 'neutral',
+      description: selectedFilter === 'today' ? 'Prospek masuk hari ini' : 'Total prospek periode ini', 
+      subDescription: selectedFilter === 'today' ? stats?.prospekChange + ' dari kemarin' : stats?.prospekChange + ' dari periode sebelumnya',
+      icon: Users,
+      color: 'bg-gradient-to-r from-blue-500 to-blue-600',
+      lightColor: 'bg-blue-50',
+      textColor: 'text-blue-600'
+    },
+    { 
+      title: 'Leads Hari Ini', 
+      value: stats?.totalLeads.toString() || '0', 
+      change: stats?.leadsChange || '+0%',
+      trend: parseFloat(stats?.leadsChange || '0') > 0 ? 'up' : parseFloat(stats?.leadsChange || '0') < 0 ? 'down' : 'neutral',
+      description: selectedFilter === 'today' ? 'Leads masuk hari ini' : 'Total leads periode ini', 
+      subDescription: selectedFilter === 'today' ? stats?.leadsChange + ' dari kemarin' : stats?.leadsChange + ' dari periode sebelumnya',
+      icon: Target,
+      color: 'bg-gradient-to-r from-green-500 to-green-600',
+      lightColor: 'bg-green-50',
+      textColor: 'text-green-600'
+    },
+    { 
+      title: 'CTR Leads', 
+      value: stats?.ctrLeads || '0%', 
+      change: '+0%',
+      trend: 'neutral',
+      description: 'Conversion rate leads', 
+      subDescription: 'Persentase konversi',
+      icon: TrendingUp,
+      color: 'bg-gradient-to-r from-indigo-500 to-indigo-600',
+      lightColor: 'bg-indigo-50',
+      textColor: 'text-indigo-600'
+    },
+    { 
+      title: 'Total Spam', 
+      value: stats?.totalSpam.toString() || '0', 
+      change: stats?.spamChange || '+0%',
+      trend: parseFloat(stats?.spamChange || '0') > 0 ? 'up' : parseFloat(stats?.spamChange || '0') < 0 ? 'down' : 'neutral',
+      description: 'Spam terdeteksi', 
+      subDescription: stats?.spamChange + ' dari periode sebelumnya',
+      icon: Shield,
+      color: 'bg-gradient-to-r from-red-500 to-red-600',
+      lightColor: 'bg-red-50',
+      textColor: 'text-red-600'
+    },
+  ]
 
   return (
     <ProtectedRoute allowedRoles={['super_admin', 'cs_support', 'cs_representative', 'advertiser']}>
@@ -335,7 +424,7 @@ export default function DashboardPage() {
                     <div className="w-full flex flex-col items-center">
                       <div 
                         className="w-6 bg-gradient-to-t from-blue-500 to-blue-400 rounded-t"
-                        style={{ height: `${(item.prospek / 200) * 120}px` }}
+                        style={{ height: `${Math.min((item.prospek / 200) * 120, 120)}px` }}
                       ></div>
                       <span className="text-xs text-gray-500 mt-1">{item.prospek}</span>
                     </div>
@@ -344,7 +433,7 @@ export default function DashboardPage() {
                     <div className="w-full flex flex-col items-center">
                       <div 
                         className="w-6 bg-gradient-to-t from-green-500 to-green-400 rounded-t"
-                        style={{ height: `${(item.leads / 50) * 80}px` }}
+                        style={{ height: `${Math.min((item.leads / 50) * 80, 80)}px` }}
                       ></div>
                       <span className="text-xs text-gray-500 mt-1">{item.leads}</span>
                     </div>
@@ -447,7 +536,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
             <div className="space-y-3">
-              {topLayanan.map((item, index) => (
+              {topLayanan.length > 0 ? topLayanan.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-gray-800">{item.name}</p>
@@ -455,7 +544,11 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-sm font-bold text-orange-600">{item.ctr}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center text-gray-500 py-4">
+                  Tidak ada data layanan
+                </div>
+              )}
             </div>
             </CardContent>
           </Card>
@@ -477,7 +570,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
             <div className="space-y-3">
-              {topKota.map((item, index) => (
+              {topKota.length > 0 ? topKota.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-gray-800">{item.name}</p>
@@ -485,7 +578,11 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-sm font-bold text-blue-600">{item.ctr}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center text-gray-500 py-4">
+                  Tidak ada data kota
+                </div>
+              )}
             </div>
             </CardContent>
           </Card>
@@ -507,7 +604,7 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent className="p-6">
             <div className="space-y-3">
-              {topCS.map((item, index) => (
+              {topCS.length > 0 ? topCS.map((item, index) => (
                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
                     <p className="text-sm font-medium text-gray-800">{item.name}</p>
@@ -515,7 +612,11 @@ export default function DashboardPage() {
                   </div>
                   <span className="text-sm font-bold text-green-600">{item.ctr}</span>
                 </div>
-              ))}
+              )) : (
+                <div className="text-center text-gray-500 py-4">
+                  Tidak ada data CS
+                </div>
+              )}
             </div>
             </CardContent>
           </Card>
@@ -542,7 +643,7 @@ export default function DashboardPage() {
                   <p className="text-sm font-medium text-green-800">CTR Hari Ini</p>
                   <p className="text-xs text-green-600">Conversion rate</p>
                 </div>
-                <span className="text-lg font-bold text-green-600">19.6%</span>
+                <span className="text-lg font-bold text-green-600">{stats?.ctrLeads || '0%'}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
                 <div>
@@ -550,9 +651,9 @@ export default function DashboardPage() {
                     <AlertTriangle className="h-4 w-4 text-red-500" />
                     <p className="text-sm font-medium text-red-800">Spam Detected</p>
                   </div>
-                  <p className="text-xs text-red-600">Hari ini</p>
+                  <p className="text-xs text-red-600">Periode ini</p>
                 </div>
-                <span className="text-lg font-bold text-red-600">127</span>
+                <span className="text-lg font-bold text-red-600">{stats?.totalSpam || 0}</span>
               </div>
             </div>
             </CardContent>
