@@ -642,6 +642,7 @@ export default function DataProspekPage() {
   // Filter selections in the panel (not yet applied)
   const [filters, setFilters] = useState({
     kodeAds: "all",
+    sumberLeads: "all",
     layananAssist: "all",
     statusLeads: "all",
     periodeWaktu: "all",
@@ -652,6 +653,7 @@ export default function DataProspekPage() {
   // Actually applied filters (used for filtering data)
   const [appliedFilters, setAppliedFilters] = useState({
     kodeAds: "all",
+    sumberLeads: "all",
     layananAssist: "all",
     statusLeads: "all",
     periodeWaktu: "all",
@@ -662,6 +664,10 @@ export default function DataProspekPage() {
   // Master data for filters - dynamically fetched from Data Master and sorted alphabetically
   const kodeAdsOptions = kodeAdsList
     .map((item: any) => item.kode)
+    .sort((a: string, b: string) => a.localeCompare(b));
+
+  const sumberLeadsOptions = sumberLeadsList
+    .map((item: any) => item.nama)
     .sort((a: string, b: string) => a.localeCompare(b));
 
   const layananAssistOptions = layananList
@@ -725,6 +731,7 @@ export default function DataProspekPage() {
 
     // Advanced filters - use appliedFilters instead of filters
     const kodeAdsMatch = appliedFilters.kodeAds === "all" || prospect.adsCode === appliedFilters.kodeAds;
+    const sumberLeadsMatch = appliedFilters.sumberLeads === "all" || prospect.leadSource === appliedFilters.sumberLeads;
     const layananAssistMatch = appliedFilters.layananAssist === "all" || prospect.assistService === appliedFilters.layananAssist;
     const statusLeadsMatch = appliedFilters.statusLeads === "all" || prospect.leadStatus === appliedFilters.statusLeads;
 
@@ -752,7 +759,7 @@ export default function DataProspekPage() {
       }
     }
 
-    return searchMatch && kodeAdsMatch && layananAssistMatch && statusLeadsMatch && dateMatch;
+    return searchMatch && kodeAdsMatch && sumberLeadsMatch && layananAssistMatch && statusLeadsMatch && dateMatch;
   });
 
   // Pagination logic
@@ -787,6 +794,7 @@ export default function DataProspekPage() {
   const resetFilters = () => {
     const defaultFilters = {
       kodeAds: "all",
+      sumberLeads: "all",
       layananAssist: "all",
       statusLeads: "all",
       periodeWaktu: "all",
@@ -1653,6 +1661,24 @@ export default function DataProspekPage() {
                     </Select>
                   </div>
 
+                  {/* Sumber Leads */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Sumber Leads</label>
+                    <Select
+                      value={filters.sumberLeads}
+                      onValueChange={(value) => handleFilterChange('sumberLeads', value)}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Semua Sumber" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Sumber</SelectItem>
+                        {sumberLeadsOptions.map((sumber) => (
+                          <SelectItem key={sumber} value={sumber}>{sumber}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
                   {/* Layanan Assist */}
                   <div>
@@ -1792,6 +1818,12 @@ value={filters.customEndDate}
                     </span>
                   )}
                   
+                  {appliedFilters.sumberLeads !== "all" && (
+                    <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
+                      <span className="text-slate-600 text-xs">Sumber:</span>
+                      <span className="font-bold text-blue-700 text-xs">"{appliedFilters.sumberLeads}"</span>
+                    </span>
+                  )}
 
                   {appliedFilters.layananAssist !== "all" && (
                     <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
