@@ -44,6 +44,7 @@ import { useKodeAdsLaporan } from '@/hooks/useKodeAdsLaporan'
 import { useLayananLaporan } from '@/hooks/useLayananLaporan'
 import { useTipeFaskesLaporan } from '@/hooks/useTipeFaskesLaporan'
 import { useKotaLaporan } from '@/hooks/useKotaLaporan'
+import { DynamicPieChart } from '@/components/DynamicPieChart'
 
 export default function LaporanPage() {
   const [dateRange, setDateRange] = useState('thismonth')
@@ -66,7 +67,7 @@ export default function LaporanPage() {
   )
 
   // Fetch Kode Ads data from database
-  const { data: kodeAdsData, isLoading: kodeAdsLoading, error: kodeAdsError, refetch: refetchKodeAds } = useKodeAdsLaporan(
+  const { data: kodeAdsLaporanData, isLoading: kodeAdsLoading, error: kodeAdsError, refetch: refetchKodeAds } = useKodeAdsLaporan(
     dateRange,
     customStartDate,
     customEndDate
@@ -209,6 +210,9 @@ export default function LaporanPage() {
     }
   }
 
+  // Color classes untuk chart
+  const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
+
   // Fungsi untuk format currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('id-ID', {
@@ -241,6 +245,20 @@ export default function LaporanPage() {
   const organikLeadSources = useMemo(() => {
     return sumberLeadsData?.breakdown?.organik ?? []
   }, [sumberLeadsData])
+
+  // Process kode ads data from API with colors for chart
+  const processedKodeAdsData = useMemo(() => {
+    const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
+    
+    if (!kodeAdsLaporanData?.data || kodeAdsLaporanData.data.length === 0) {
+      return []
+    }
+    
+    return kodeAdsLaporanData.data.slice(0, 8).map((item, index) => ({
+      ...item,
+      color: colorClasses[index % colorClasses.length]
+    }))
+  }, [kodeAdsLaporanData])
 
   // Process layanan data from API with colors
   const layananData = useMemo(() => {
@@ -1818,8 +1836,8 @@ export default function LaporanPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {kodeAdsData && kodeAdsData.data && kodeAdsData.data.length > 0 ? (
-                          kodeAdsData.data.map((kodeAds, index) => {
+                        {kodeAdsLaporanData?.data && kodeAdsLaporanData.data.length > 0 ? (
+                          kodeAdsLaporanData.data.map((kodeAds, index) => {
                             const colors = ['blue', 'green', 'orange', 'purple', 'indigo', 'emerald', 'pink', 'teal']
                             const color = colors[index % colors.length]
                             
@@ -1954,149 +1972,20 @@ export default function LaporanPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* Pie Chart Visual */}
-                  <div className="relative h-64 flex items-center justify-center mb-6">
-                    <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
-                      {/* FB001 - 32% (156/485 total leads) */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth="20"
-                        strokeDasharray="160 340"
-                        strokeDashoffset="0"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* IG004 - 15% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#8b5cf6"
-                        strokeWidth="20"
-                        strokeDasharray="75 425"
-                        strokeDashoffset="-160"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* GG002 - 20% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="20"
-                        strokeDasharray="100 400"
-                        strokeDashoffset="-235"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* FB003 - 14% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="20"
-                        strokeDasharray="70 430"
-                        strokeDashoffset="-335"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* GAD006 - 9% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#059669"
-                        strokeWidth="20"
-                        strokeDasharray="45 455"
-                        strokeDashoffset="-405"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* WA005 - 9% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#6366f1"
-                        strokeWidth="20"
-                        strokeDasharray="45 455"
-                        strokeDashoffset="-450"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                    </svg>
-                    
-                    {/* Center label */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">485</p>
-                        <p className="text-sm text-slate-600">Total Leads</p>
-                      </div>
+                  {processedKodeAdsData && processedKodeAdsData.length > 0 ? (
+                    <DynamicPieChart
+                      data={processedKodeAdsData.map((item, index) => ({
+                        label: item.kode || 'Unknown',
+                        value: item.leads,
+                        color: item.color
+                      }))}
+                      totalLabel="Total Leads"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-64">
+                      <p className="text-slate-500">No data available</p>
                     </div>
-                  </div>
-
-                  {/* Legend */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700 font-mono">FB001</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-blue-600">156 (32%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700 font-mono">GG002</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-green-600">98 (20%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700 font-mono">IG004</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-purple-600">73 (15%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700 font-mono">FB003</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-orange-600">67 (14%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700 font-mono">GAD006</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-emerald-600">46 (9%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700 font-mono">WA005</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-indigo-600">45 (9%)</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -2260,149 +2149,20 @@ export default function LaporanPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* Pie Chart Visual */}
-                  <div className="relative h-64 flex items-center justify-center mb-6">
-                    <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
-                      {/* Konsultasi Medis - 31% (189/615 total leads) */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#8b5cf6"
-                        strokeWidth="20"
-                        strokeDasharray="155 345"
-                        strokeDashoffset="0"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Medical Check-up - 24% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth="20"
-                        strokeDasharray="120 380"
-                        strokeDashoffset="-155"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Vaksinasi - 17% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="20"
-                        strokeDasharray="85 415"
-                        strokeDashoffset="-275"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Telemedicine - 12% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="20"
-                        strokeDasharray="60 440"
-                        strokeDashoffset="-360"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Lab Test - 9% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#6366f1"
-                        strokeWidth="20"
-                        strokeDasharray="45 455"
-                        strokeDashoffset="-420"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Homecare - 7% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#059669"
-                        strokeWidth="20"
-                        strokeDasharray="35 465"
-                        strokeDashoffset="-465"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                    </svg>
-                    
-                    {/* Center label */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">615</p>
-                        <p className="text-sm text-slate-600">Total Leads</p>
-                      </div>
+                  {layananData && layananData.length > 0 ? (
+                    <DynamicPieChart
+                      data={layananData.map((item) => ({
+                        label: item.name,
+                        value: item.leads,
+                        color: item.color
+                      }))}
+                      totalLabel="Total Leads"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-64">
+                      <p className="text-slate-500">No data available</p>
                     </div>
-                  </div>
-
-                  {/* Legend */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Konsultasi Medis</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-purple-600">189 (31%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Medical Check-up</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-blue-600">147 (24%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Vaksinasi</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-green-600">103 (17%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Telemedicine</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-orange-600">76 (12%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Lab Test</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-indigo-600">58 (9%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Homecare</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-emerald-600">42 (7%)</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -2565,149 +2325,20 @@ export default function LaporanPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {/* Pie Chart Visual */}
-                  <div className="relative h-64 flex items-center justify-center mb-6">
-                    <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
-                      {/* Rumah Sakit - 37% (345/885 total leads) */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#3b82f6"
-                        strokeWidth="20"
-                        strokeDasharray="185 315"
-                        strokeDashoffset="0"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Klinik - 22% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="20"
-                        strokeDasharray="110 390"
-                        strokeDashoffset="-185"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Lab/Radiologi - 14% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#8b5cf6"
-                        strokeWidth="20"
-                        strokeDasharray="70 430"
-                        strokeDashoffset="-295"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Apotek - 10% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#6366f1"
-                        strokeWidth="20"
-                        strokeDasharray="50 450"
-                        strokeDashoffset="-365"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Puskesmas - 10% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="20"
-                        strokeDasharray="50 450"
-                        strokeDashoffset="-415"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                      {/* Klinik Gigi - 5% */}
-                      <circle
-                        cx="100"
-                        cy="100"
-                        r="80"
-                        fill="none"
-                        stroke="#059669"
-                        strokeWidth="20"
-                        strokeDasharray="25 475"
-                        strokeDashoffset="-465"
-                        className="transition-all duration-300 hover:stroke-width-[24]"
-                      />
-                    </svg>
-                    
-                    {/* Center label */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">885</p>
-                        <p className="text-sm text-slate-600">Total Leads</p>
-                      </div>
+                  {tipeFaskesData && tipeFaskesData.length > 0 ? (
+                    <DynamicPieChart
+                      data={tipeFaskesData.map((item) => ({
+                        label: item.name,
+                        value: item.leads,
+                        color: item.color
+                      }))}
+                      totalLabel="Total Leads"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-64">
+                      <p className="text-slate-500">No data available</p>
                     </div>
-                  </div>
-
-                  {/* Legend */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Rumah Sakit</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-blue-600">345 (39%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Klinik</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-green-600">198 (22%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Lab/Radiologi</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-purple-600">124 (14%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Apotek</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-indigo-600">89 (10%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-orange-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Puskesmas</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-orange-600">87 (10%)</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                        <span className="text-sm text-slate-700">Klinik Gigi</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm font-bold text-emerald-600">42 (5%)</span>
-                      </div>
-                    </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
