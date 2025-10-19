@@ -142,18 +142,46 @@ export async function GET(request: NextRequest) {
     })
 
     // Convert map to array and calculate CTR
-    const sumberLeadsData = Array.from(sumberLeadsMap.values()).map(data => ({
+    const sumberLeadsDataRaw = Array.from(sumberLeadsMap.values()).map(data => ({
       ...data,
       ctr: data.prospek > 0 ? (data.leads / data.prospek) * 100 : 0,
       ctrCustomer: data.leads > 0 ? (data.customer / data.leads) * 100 : 0
     }))
 
-    // Sort by prospek count descending
-    sumberLeadsData.sort((a, b) => b.prospek - a.prospek)
+    // Group non-ads sources into 'Organik' and keep 'ads' sources separate
+  const adsItems = sumberLeadsDataRaw.filter(item => item.name.toLowerCase().includes('ads'))
+  const organikItems = sumberLeadsDataRaw.filter(item => !item.name.toLowerCase().includes('ads'))
+
+    let groupedData: typeof sumberLeadsDataRaw
+    if (organikItems.length > 0) {
+      const organikTotal = organikItems.reduce((acc, item) => {
+        acc.prospek += item.prospek || 0
+        acc.leads += item.leads || 0
+        acc.customer += item.customer || 0
+        acc.totalNilaiLangganan += item.totalNilaiLangganan || 0
+        return acc
+      }, { id: -1, name: 'Organik', prospek: 0, leads: 0, customer: 0, totalNilaiLangganan: 0, ctr: 0, ctrCustomer: 0 }) as any
+
+      // Recompute CTRs for Organik
+      organikTotal.ctr = organikTotal.prospek > 0 ? (organikTotal.leads / organikTotal.prospek) * 100 : 0
+      organikTotal.ctrCustomer = organikTotal.leads > 0 ? (organikTotal.customer / organikTotal.leads) * 100 : 0
+
+      // Organik first, then ads items
+      groupedData = [organikTotal, ...adsItems]
+    } else {
+      groupedData = adsItems
+    }
+
+    // Sort by prospek count descending for consistency inside each group
+    groupedData.sort((a, b) => b.prospek - a.prospek)
+
+    // Sort organik breakdown for consistent display (desc by prospek)
+    const organikBreakdown = organikItems.sort((a, b) => b.prospek - a.prospek)
 
     return NextResponse.json({
       success: true,
-      data: sumberLeadsData,
+      data: groupedData,
+      organikBreakdown,
       filter,
       dateRange: {
         start: startDate,

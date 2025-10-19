@@ -14,6 +14,7 @@ export interface SumberLeadsLaporanData {
 interface SumberLeadsLaporanResponse {
   success: boolean
   data: SumberLeadsLaporanData[]
+  organikBreakdown?: SumberLeadsLaporanData[]
   filter: string
   dateRange: {
     start: string | null
@@ -44,6 +45,11 @@ export function useSumberLeadsLaporan(
       
       return response.json()
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Force fresh data so UI never shows stale/dummy remnants
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
   })
 }
