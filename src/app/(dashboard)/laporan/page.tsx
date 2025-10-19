@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+// Updated: Added Organik grouping feature for sumber leads
+import React, { useState, useEffect, useMemo } from 'react'
 import { 
   FileText, 
   BarChart3, 
@@ -38,6 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { useSumberLeadsLaporan } from '@/hooks/useSumberLeadsLaporan'
+import { useLaporanSummary } from '@/hooks/useLaporanSummary'
+import { useKodeAdsLaporan } from '@/hooks/useKodeAdsLaporan'
 
 export default function LaporanPage() {
   const [dateRange, setDateRange] = useState('thismonth')
@@ -45,8 +48,22 @@ export default function LaporanPage() {
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
 
+  // Fetch Summary data from database
+  const { data: summaryData, isLoading: summaryLoading, error: summaryError, refetch: refetchSummary } = useLaporanSummary(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
   // Fetch Sumber Leads data from database
   const { data: sumberLeadsData, isLoading: sumberLeadsLoading, error: sumberLeadsError, refetch: refetchSumberLeads } = useSumberLeadsLaporan(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
+  // Fetch Kode Ads data from database
+  const { data: kodeAdsData, isLoading: kodeAdsLoading, error: kodeAdsError, refetch: refetchKodeAds } = useKodeAdsLaporan(
     dateRange,
     customStartDate,
     customEndDate
@@ -62,11 +79,15 @@ export default function LaporanPage() {
   // Refetch data when filter changes
   useEffect(() => {
     if (dateRange === 'custom' && customStartDate && customEndDate) {
+      refetchSummary()
       refetchSumberLeads()
+      refetchKodeAds()
     } else if (dateRange !== 'custom') {
+      refetchSummary()
       refetchSumberLeads()
+      refetchKodeAds()
     }
-  }, [dateRange, customStartDate, customEndDate, refetchSumberLeads])
+  }, [dateRange, customStartDate, customEndDate, refetchSummary, refetchSumberLeads, refetchKodeAds])
   
   // State untuk accordion Kode Ads
   const [expandedAdsCode, setExpandedAdsCode] = useState(null)
@@ -178,37 +199,18 @@ export default function LaporanPage() {
     setExpandedOrganikSources(!expandedOrganikSources)
   }
 
-  // Data sumber leads lengkap
-  const allLeadSources = [
-    { name: 'Facebook Ads', prospek: 583, leads: 245, ctr: 42.0, customer: 178, totalNilaiLangganan: 425000000, color: 'blue', isAds: true },
-    { name: 'Google Ads', prospek: 591, leads: 189, ctr: 32.0, customer: 139, totalNilaiLangganan: 337500000, color: 'green', isAds: true },
-    { name: 'Website Organik', prospek: 326, leads: 98, ctr: 30.1, customer: 72, totalNilaiLangganan: 186000000, color: 'orange', isAds: false },
-    { name: 'Instagram', prospek: 289, leads: 67, ctr: 23.2, customer: 45, totalNilaiLangganan: 112500000, color: 'purple', isAds: false },
-    { name: 'Referral', prospek: 174, leads: 52, ctr: 29.9, customer: 38, totalNilaiLangganan: 95000000, color: 'indigo', isAds: false },
-    { name: 'WhatsApp', prospek: 135, leads: 34, ctr: 25.2, customer: 24, totalNilaiLangganan: 60000000, color: 'emerald', isAds: false }
-  ]
+  // Proses data sumber leads dari server (sudah dikelompokkan)
+  const processedLeadSources = useMemo(() => {
+    if (!sumberLeadsData?.data || sumberLeadsData.data.length === 0) {
+      return []
+    }
+    return sumberLeadsData.data
+  }, [sumberLeadsData])
 
-  // Pisahkan sumber leads ads dan organik
-  const adsLeadSources = allLeadSources.filter(source => source.isAds)
-  const organikLeadSources = allLeadSources.filter(source => !source.isAds)
-
-  // Hitung total organik
-  const organikTotal = {
-    name: 'Organik',
-    prospek: organikLeadSources.reduce((sum, source) => sum + source.prospek, 0),
-    leads: organikLeadSources.reduce((sum, source) => sum + source.leads, 0),
-    customer: organikLeadSources.reduce((sum, source) => sum + source.customer, 0),
-    totalNilaiLangganan: organikLeadSources.reduce((sum, source) => sum + source.totalNilaiLangganan, 0),
-    ctr: 0,
-    ctrCustomer: 0,
-    color: 'slate'
-  }
-  // Hitung CTR organik dan CTR Customer
-  organikTotal.ctr = organikTotal.prospek > 0 ? (organikTotal.leads / organikTotal.prospek) * 100 : 0
-  organikTotal.ctrCustomer = organikTotal.leads > 0 ? (organikTotal.customer / organikTotal.leads) * 100 : 0
-
-  // Gabungkan ads sources dengan organik total untuk ditampilkan di tabel - Organik di posisi paling atas
-  const processedLeadSources = [organikTotal, ...adsLeadSources]
+  // Data organik individual untuk accordion, ambil dari server agar konsisten
+  const organikLeadSources = useMemo(() => {
+    return sumberLeadsData?.breakdown?.organik ?? []
+  }, [sumberLeadsData])
 
   // Data untuk Kota/Kabupaten
   const kotaData = [
@@ -1071,36 +1073,69 @@ export default function LaporanPage() {
   const uniqueAdsCodes = [...new Set(monthlyAdsSpendData.map(item => item.kodeAds))]
   const uniqueLeadSources = [...new Set(monthlyAdsSpendData.map(item => item.sumberLeads))]
 
-  // Sample data untuk laporan
-  const summaryStats = [
+  // Summary stats dari database atau default values
+  const summaryStats = summaryData?.data ? [
     {
       title: "Total Prospek",
-      value: "4,287",
-      change: "+15.2%",
+      value: summaryData.data.totalProspek.toLocaleString('id-ID'),
+      change: "+0%",
       trend: "up",
       icon: Users,
       color: "blue"
     },
     {
       title: "Total Leads",
-      value: "842",
-      change: "+12.4%",
+      value: summaryData.data.totalLeads.toLocaleString('id-ID'),
+      change: "+0%",
       trend: "up",
       icon: Target,
       color: "green"
     },
     {
       title: "CTR Leads",
-      value: "19.6%",
-      change: "+3.8%",
+      value: `${summaryData.data.ctrLeads}%`,
+      change: "+0%",
       trend: "up",
       icon: TrendingUp,
       color: "purple"
     },
     {
       title: "Total Spam",
-      value: "127",
-      change: "-8.2%",
+      value: summaryData.data.totalSpam.toLocaleString('id-ID'),
+      change: "0%",
+      trend: "down",
+      icon: Activity,
+      color: "orange"
+    }
+  ] : [
+    {
+      title: "Total Prospek",
+      value: "0",
+      change: "+0%",
+      trend: "up",
+      icon: Users,
+      color: "blue"
+    },
+    {
+      title: "Total Leads",
+      value: "0",
+      change: "+0%",
+      trend: "up",
+      icon: Target,
+      color: "green"
+    },
+    {
+      title: "CTR Leads",
+      value: "0%",
+      change: "+0%",
+      trend: "up",
+      icon: TrendingUp,
+      color: "purple"
+    },
+    {
+      title: "Total Spam",
+      value: "0",
+      change: "0%",
       trend: "down",
       icon: Activity,
       color: "orange"
@@ -1210,33 +1245,70 @@ export default function LaporanPage() {
 
         {/* Summary Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {summaryStats.map((stat, index) => (
-            <Card key={index} className="bg-white shadow-lg border-slate-200 hover:shadow-xl transition-shadow duration-200">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-600">{stat.title}</p>
-                    <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
-                    <div className="flex items-center gap-1">
-                      {stat.trend === 'up' ? (
-                        <ArrowUpRight className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <ArrowDownRight className="h-4 w-4 text-red-500" />
-                      )}
-                      <span className={`text-sm font-medium ${
-                        stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {stat.change}
-                      </span>
+          {summaryLoading ? (
+            // Loading state
+            Array.from({ length: 4 }).map((_, index) => (
+              <Card key={index} className="bg-white shadow-lg border-slate-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-center h-24">
+                    <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : summaryError ? (
+            // Error state
+            <div className="col-span-full">
+              <Card className="bg-red-50 border-red-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 text-red-700">
+                    <AlertTriangle className="h-5 w-5" />
+                    <p>Gagal memuat data summary. Silakan coba lagi.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            summaryStats.map((stat, index) => (
+              <Card key={index} className="bg-white shadow-lg border-slate-200 hover:shadow-xl transition-shadow duration-200">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-slate-600">{stat.title}</p>
+                      <p className="text-2xl font-bold text-slate-900">{stat.value}</p>
+                      <div className="flex items-center gap-1">
+                        {stat.trend === 'up' ? (
+                          <ArrowUpRight className="h-4 w-4 text-green-500" />
+                        ) : (
+                          <ArrowDownRight className="h-4 w-4 text-red-500" />
+                        )}
+                        <span className={`text-sm font-medium ${
+                          stat.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {stat.change}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={
+                      stat.color === 'blue' ? 'p-3 rounded-lg bg-blue-100' :
+                      stat.color === 'green' ? 'p-3 rounded-lg bg-green-100' :
+                      stat.color === 'purple' ? 'p-3 rounded-lg bg-purple-100' :
+                      stat.color === 'orange' ? 'p-3 rounded-lg bg-orange-100' :
+                      'p-3 rounded-lg bg-slate-100'
+                    }>
+                      <stat.icon className={
+                        stat.color === 'blue' ? 'h-6 w-6 text-blue-600' :
+                        stat.color === 'green' ? 'h-6 w-6 text-green-600' :
+                        stat.color === 'purple' ? 'h-6 w-6 text-purple-600' :
+                        stat.color === 'orange' ? 'h-6 w-6 text-orange-600' :
+                        'h-6 w-6 text-slate-600'
+                      } />
                     </div>
                   </div>
-                  <div className={`p-3 rounded-lg bg-${stat.color}-100`}>
-                    <stat.icon className={`h-6 w-6 text-${stat.color}-600`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))
+          )}
         </div>
 
         {/* Main Content Tabs */}
@@ -1341,8 +1413,8 @@ export default function LaporanPage() {
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {sumberLeadsData && sumberLeadsData.data && sumberLeadsData.data.length > 0 ? (
-                            sumberLeadsData.data.map((source, index) => (
+                          {processedLeadSources && processedLeadSources.length > 0 ? (
+                            processedLeadSources.map((source, index) => (
                           <React.Fragment key={source.name}>
                             {/* Main Row */}
                             <TableRow 
@@ -1356,10 +1428,14 @@ export default function LaporanPage() {
                                   <Badge 
                                     variant="outline" 
                                     className={`text-xs rounded-full font-medium px-3 py-1 ${
-                                      source.name === 'Facebook Ads' 
+                                      source.name.toLowerCase().includes('facebook') 
                                         ? 'border-blue-300 bg-blue-50 text-blue-700'
-                                        : source.name === 'Google Ads'
+                                        : source.name.toLowerCase().includes('google')
                                         ? 'border-green-300 bg-green-50 text-green-700'
+                                        : source.name.toLowerCase().includes('instagram')
+                                        ? 'border-pink-300 bg-pink-50 text-pink-700'
+                                        : source.name.toLowerCase().includes('tiktok')
+                                        ? 'border-purple-300 bg-purple-50 text-purple-700'
                                         : source.name === 'Organik'
                                         ? 'border-slate-300 bg-slate-50 text-slate-700'
                                         : 'border-gray-300 bg-gray-50 text-gray-700'
@@ -1395,10 +1471,14 @@ export default function LaporanPage() {
                                   <div className="w-16 h-2 bg-slate-200 rounded-full">
                                     <div 
                                       className={`h-2 rounded-full ${
-                                        source.name === 'Facebook Ads' 
+                                        source.name.toLowerCase().includes('facebook') 
                                           ? 'bg-blue-500'
-                                          : source.name === 'Google Ads'
+                                          : source.name.toLowerCase().includes('google')
                                           ? 'bg-green-500'
+                                          : source.name.toLowerCase().includes('instagram')
+                                          ? 'bg-pink-500'
+                                          : source.name.toLowerCase().includes('tiktok')
+                                          ? 'bg-purple-500'
                                           : source.name === 'Organik'
                                           ? 'bg-slate-500'
                                           : 'bg-gray-500'
@@ -1408,10 +1488,14 @@ export default function LaporanPage() {
                                   </div>
                                   <span 
                                     className={`text-sm font-bold ${
-                                      source.name === 'Facebook Ads' 
+                                      source.name.toLowerCase().includes('facebook') 
                                         ? 'text-blue-600'
-                                        : source.name === 'Google Ads'
+                                        : source.name.toLowerCase().includes('google')
                                         ? 'text-green-600'
+                                        : source.name.toLowerCase().includes('instagram')
+                                        ? 'text-pink-600'
+                                        : source.name.toLowerCase().includes('tiktok')
+                                        ? 'text-purple-600'
                                         : source.name === 'Organik'
                                         ? 'text-slate-600'
                                         : 'text-gray-600'
@@ -1426,10 +1510,14 @@ export default function LaporanPage() {
                                   <div className="w-16 h-2 bg-slate-200 rounded-full">
                                     <div 
                                       className={`h-2 rounded-full ${
-                                        source.name === 'Facebook Ads' 
+                                        source.name.toLowerCase().includes('facebook') 
                                           ? 'bg-blue-500'
-                                          : source.name === 'Google Ads'
+                                          : source.name.toLowerCase().includes('google')
                                           ? 'bg-green-500'
+                                          : source.name.toLowerCase().includes('instagram')
+                                          ? 'bg-pink-500'
+                                          : source.name.toLowerCase().includes('tiktok')
+                                          ? 'bg-purple-500'
                                           : source.name === 'Organik'
                                           ? 'bg-slate-500'
                                           : 'bg-gray-500'
@@ -1439,10 +1527,14 @@ export default function LaporanPage() {
                                   </div>
                                   <span 
                                     className={`text-sm font-bold ${
-                                      source.name === 'Facebook Ads' 
+                                      source.name.toLowerCase().includes('facebook') 
                                         ? 'text-blue-600'
-                                        : source.name === 'Google Ads'
+                                        : source.name.toLowerCase().includes('google')
                                         ? 'text-green-600'
+                                        : source.name.toLowerCase().includes('instagram')
+                                        ? 'text-pink-600'
+                                        : source.name.toLowerCase().includes('tiktok')
+                                        ? 'text-purple-600'
                                         : source.name === 'Organik'
                                         ? 'text-slate-600'
                                         : 'text-gray-600'
@@ -1465,23 +1557,42 @@ export default function LaporanPage() {
                                         Detail Sumber Leads Organik
                                       </h4>
                                       <div className="space-y-2">
-                                        {organikLeadSources.map((organikSource, orgIndex) => (
-                                          <div key={organikSource.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                                        {organikLeadSources.length === 0 ? (
+                                          <div className="p-3 bg-slate-50 rounded-lg text-sm text-slate-500">
+                                            Tidak ada detail sumber leads organik untuk periode ini.
+                                          </div>
+                                        ) : (
+                                        organikLeadSources.map((organikSource, orgIndex) => {
+                                          // Gunakan CTR dari backend jika tersedia, fallback ke perhitungan lokal
+                                          const organikCtrLeads = typeof organikSource.ctr === 'number'
+                                            ? organikSource.ctr
+                                            : (organikSource.prospek > 0 
+                                              ? ((organikSource.leads / organikSource.prospek) * 100) 
+                                              : 0)
+                                          const organikCtrCustomer = typeof organikSource.ctrCustomer === 'number'
+                                            ? organikSource.ctrCustomer
+                                            : (organikSource.leads > 0 
+                                              ? (((organikSource.customer || 0) / organikSource.leads) * 100) 
+                                              : 0)
+
+                                          // Assign colors based on index
+                                          const colorClasses = [
+                                            { badge: 'border-orange-300 bg-orange-50 text-orange-700', text: 'text-orange-600' },
+                                            { badge: 'border-purple-300 bg-purple-50 text-purple-700', text: 'text-purple-600' },
+                                            { badge: 'border-indigo-300 bg-indigo-50 text-indigo-700', text: 'text-indigo-600' },
+                                            { badge: 'border-emerald-300 bg-emerald-50 text-emerald-700', text: 'text-emerald-600' },
+                                            { badge: 'border-cyan-300 bg-cyan-50 text-cyan-700', text: 'text-cyan-600' },
+                                            { badge: 'border-rose-300 bg-rose-50 text-rose-700', text: 'text-rose-600' },
+                                          ]
+                                          const colorClass = colorClasses[orgIndex % colorClasses.length]
+
+                                          return (
+                                          <div key={organikSource.id || organikSource.name} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
                                             <div className="flex-1">
                                               <div className="flex items-center gap-2">
                                                 <Badge 
                                                   variant="outline" 
-                                                  className={`text-xs rounded-full font-medium px-2 py-1 ${
-                                                    organikSource.color === 'orange' 
-                                                      ? 'border-orange-300 bg-orange-50 text-orange-700'
-                                                      : organikSource.color === 'purple'
-                                                      ? 'border-purple-300 bg-purple-50 text-purple-700'
-                                                      : organikSource.color === 'indigo'
-                                                      ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-                                                      : organikSource.color === 'emerald'
-                                                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                                                      : 'border-slate-300 bg-slate-50 text-slate-700'
-                                                  }`}
+                                                  className={`text-xs rounded-full font-medium px-2 py-1 ${colorClass.badge}`}
                                                 >
                                                   {organikSource.name}
                                                 </Badge>
@@ -1494,19 +1605,7 @@ export default function LaporanPage() {
                                               </div>
                                               <div className="text-center">
                                                 <p className="text-slate-500">Leads</p>
-                                                <p 
-                                                  className={`font-bold ${
-                                                    organikSource.color === 'orange' 
-                                                      ? 'text-orange-600'
-                                                      : organikSource.color === 'purple'
-                                                      ? 'text-purple-600'
-                                                      : organikSource.color === 'indigo'
-                                                      ? 'text-indigo-600'
-                                                      : organikSource.color === 'emerald'
-                                                      ? 'text-emerald-600'
-                                                      : 'text-slate-600'
-                                                  }`}
-                                                >
+                                                <p className={`font-bold ${colorClass.text}`}>
                                                   {organikSource.leads}
                                                 </p>
                                               </div>
@@ -1520,17 +1619,17 @@ export default function LaporanPage() {
                                               </div>
                                               <div className="text-center">
                                                 <p className="text-slate-500">CTR Leads</p>
-                                                <p className="font-bold text-green-600">{organikSource.ctr.toFixed(1)}%</p>
+                                                <p className="font-bold text-green-600">{organikCtrLeads.toFixed(1)}%</p>
                                               </div>
                                               <div className="text-center">
                                                 <p className="text-slate-500">CTR Customer</p>
-                                                <p className="font-bold text-blue-600">
-                                                  {organikSource.leads > 0 ? (((organikSource.customer || 0) / organikSource.leads) * 100).toFixed(1) : '0.0'}%
-                                                </p>
+                                                <p className="font-bold text-blue-600">{organikCtrCustomer.toFixed(1)}%</p>
                                               </div>
                                             </div>
                                           </div>
-                                        ))}
+                                          )
+                                        })
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -1561,19 +1660,19 @@ export default function LaporanPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {sumberLeadsData && sumberLeadsData.data && sumberLeadsData.data.length > 0 ? (
+                  {processedLeadSources && processedLeadSources.length > 0 ? (
                     <>
                       {/* Pie Chart Visual */}
                       <div className="relative h-64 flex items-center justify-center mb-6">
                         <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
                           {(() => {
-                            const totalLeads = sumberLeadsData.data.reduce((sum, source) => sum + source.leads, 0)
+                            const totalLeads = processedLeadSources.reduce((sum, source) => sum + source.leads, 0)
                             if (totalLeads === 0) return null
                             
                             let currentOffset = 0
-                            const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+                            const colors = ['#64748b', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
                             
-                            return sumberLeadsData.data.map((source, index) => {
+                            return processedLeadSources.map((source, index) => {
                               const percentage = (source.leads / totalLeads) * 100
                               const circumference = 2 * Math.PI * 80
                               const strokeLength = (percentage / 100) * circumference
@@ -1603,7 +1702,7 @@ export default function LaporanPage() {
                         <div className="absolute inset-0 flex items-center justify-center">
                           <div className="text-center">
                             <p className="text-2xl font-bold text-slate-900">
-                              {sumberLeadsData.data.reduce((sum, source) => sum + source.leads, 0)}
+                              {processedLeadSources.reduce((sum, source) => sum + source.leads, 0)}
                             </p>
                             <p className="text-sm text-slate-600">Total Leads</p>
                           </div>
@@ -1612,10 +1711,10 @@ export default function LaporanPage() {
 
                       {/* Legend */}
                       <div className="space-y-3">
-                        {sumberLeadsData.data.map((source, index) => {
-                          const totalLeads = sumberLeadsData.data.reduce((sum, s) => sum + s.leads, 0)
+                        {processedLeadSources.map((source, index) => {
+                          const totalLeads = processedLeadSources.reduce((sum, s) => sum + s.leads, 0)
                           const percentage = totalLeads > 0 ? ((source.leads / totalLeads) * 100).toFixed(0) : '0'
-                          const colors = ['blue', 'green', 'orange', 'purple', 'pink', 'cyan', 'lime']
+                          const colors = ['slate', 'green', 'orange', 'purple', 'pink', 'cyan', 'lime']
                           const color = colors[index % colors.length]
                           
                           return (
@@ -1648,6 +1747,21 @@ export default function LaporanPage() {
 
           {/* Kode Ads Tab */}
           <TabsContent value="kode-ads">
+            {kodeAdsLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                <span className="ml-3 text-slate-600">Memuat data Kode Ads...</span>
+              </div>
+            ) : kodeAdsError ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
+                <p className="text-slate-600 mb-4">Gagal memuat data Kode Ads</p>
+                <Button onClick={() => refetchKodeAds()} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Coba Lagi
+                </Button>
+              </div>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Tabel Laporan Performance Kode Ads */}
               <Card className="bg-white shadow-lg border-slate-200">
@@ -1672,501 +1786,124 @@ export default function LaporanPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {/* FB001 Row */}
-                        <TableRow 
-                          className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
-                          onClick={() => toggleAdsCodeAccordion('FB001')}
-                        >
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs rounded-full border-blue-300 bg-blue-50 text-blue-700 font-medium px-3 py-1 font-mono">
-                                FB001
-                              </Badge>
-                              {expandedAdsCode === 'FB001' ? 
-                                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
-                                <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
-                              }
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{adsCodeSummary['FB001'].prospek}</TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{adsCodeSummary['FB001'].leads}</TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div className="w-6 h-2 bg-blue-500 rounded-full"></div>
-                              </div>
-                              <span className="text-sm font-bold text-blue-600">{adsCodeSummary['FB001'].ctr}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div 
-                                  className="h-2 bg-green-500 rounded-full"
-                                  style={{width: `${Math.min(((adsCodeSummary['FB001'].customer / adsCodeSummary['FB001'].leads) * 100) * 2, 100)}%`}}
-                                ></div>
-                              </div>
-                              <span className="text-sm font-bold text-green-600">
-                                {((adsCodeSummary['FB001'].customer / adsCodeSummary['FB001'].leads) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-blue-500" />
-                              <span className="font-bold text-blue-600">{adsCodeSummary['FB001'].customer}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                            <div className="font-bold text-green-600">{formatCurrency(adsCodeSummary['FB001'].totalNilaiLangganan)}</div>
-                            <div className="text-xs text-slate-500">total nilai</div>
-                          </TableCell>
-                        </TableRow>
-                        {/* FB001 Accordion */}
-                        {expandedAdsCode === 'FB001' && (
-                          <TableRow className="bg-blue-50 border-b border-blue-200">
-                            <TableCell colSpan={7} className="py-0 px-0">
-                              <div className="px-8 py-4">
-                                <div className="bg-white rounded-lg shadow-sm border border-blue-200 p-4">
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                                    <Target className="h-4 w-4 mr-2 text-blue-600" />
-                                    Detail ID Ads untuk Kode FB001
-                                  </h4>
-                                  <div className="space-y-2">
-                                    {adsData['FB001'].map((ad, index) => (
-                                      <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
-                                          <p className="text-xs text-slate-600">{ad.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs">
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Prospek</p>
-                                            <p className="font-bold text-slate-900">{ad.prospek}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Leads</p>
-                                            <p className="font-bold text-blue-600">{ad.leads}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR Leads</p>
-                                            <p className="font-bold text-green-600">{ad.ctr}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR Customer</p>
-                                            <p className="font-bold text-green-600">
-                                              {((ad.customer / ad.leads) * 100).toFixed(1)}%
-                                            </p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Customer</p>
-                                            <p className="font-bold text-blue-600">{ad.customer}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Nilai Langganan</p>
-                                            <p className="font-bold text-green-600">{formatCurrency(ad.totalNilaiLangganan)}</p>
-                                          </div>
-                                        </div>
+                        {kodeAdsData && kodeAdsData.data && kodeAdsData.data.length > 0 ? (
+                          kodeAdsData.data.map((kodeAds, index) => {
+                            const colors = ['blue', 'green', 'orange', 'purple', 'indigo', 'emerald', 'pink', 'teal']
+                            const color = colors[index % colors.length]
+                            
+                            return (
+                              <React.Fragment key={kodeAds.id}>
+                                {/* Main Row */}
+                                <TableRow 
+                                  className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
+                                  onClick={() => toggleAdsCodeAccordion(kodeAds.kode)}
+                                >
+                                  <TableCell className="py-4 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className={`text-xs rounded-full border-${color}-300 bg-${color}-50 text-${color}-700 font-medium px-3 py-1 font-mono`}>
+                                        {kodeAds.kode}
+                                      </Badge>
+                                      {expandedAdsCode === kodeAds.kode ? 
+                                        <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
+                                        <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
+                                      }
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{kodeAds.prospek}</TableCell>
+                                  <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{kodeAds.leads}</TableCell>
+                                  <TableCell className="py-4 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-16 h-2 bg-slate-200 rounded-full">
+                                        <div 
+                                          className={`h-2 bg-${color}-500 rounded-full`}
+                                          style={{width: `${Math.min(kodeAds.ctr * 2.4, 100)}%`}}
+                                        ></div>
                                       </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
+                                      <span className={`text-sm font-bold text-${color}-600`}>{kodeAds.ctr.toFixed(1)}%</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-4">
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-16 h-2 bg-slate-200 rounded-full">
+                                        <div 
+                                          className="h-2 bg-green-500 rounded-full"
+                                          style={{width: `${Math.min(kodeAds.ctrCustomer * 2, 100)}%`}}
+                                        ></div>
+                                      </div>
+                                      <span className="text-sm font-bold text-green-600">
+                                        {kodeAds.ctrCustomer.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
+                                    <div className="flex items-center gap-1">
+                                      <Users className={`h-4 w-4 text-${color}-500`} />
+                                      <span className={`font-bold text-${color}-600`}>{kodeAds.customer}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
+                                    <div className="font-bold text-green-600">{formatCurrency(kodeAds.totalNilaiLangganan)}</div>
+                                    <div className="text-xs text-slate-500">total nilai</div>
+                                  </TableCell>
+                                </TableRow>
 
-                        {/* GG002 Row */}
-                        <TableRow 
-                          className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
-                          onClick={() => toggleAdsCodeAccordion('GG002')}
-                        >
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs rounded-full border-green-300 bg-green-50 text-green-700 font-medium px-3 py-1 font-mono">
-                                GG002
-                              </Badge>
-                              {expandedAdsCode === 'GG002' ? 
-                                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
-                                <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
-                              }
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{adsCodeSummary['GG002'].prospek}</TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{adsCodeSummary['GG002'].leads}</TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div className="w-5 h-2 bg-green-500 rounded-full"></div>
-                              </div>
-                              <span className="text-sm font-bold text-green-600">{adsCodeSummary['GG002'].ctr}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div 
-                                  className="h-2 bg-green-500 rounded-full"
-                                  style={{width: `${Math.min(((adsCodeSummary['GG002'].customer / adsCodeSummary['GG002'].leads) * 100) * 2, 100)}%`}}
-                                ></div>
-                              </div>
-                              <span className="text-sm font-bold text-green-600">
-                                {((adsCodeSummary['GG002'].customer / adsCodeSummary['GG002'].leads) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-green-500" />
-                              <span className="font-bold text-green-600">{adsCodeSummary['GG002'].customer}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                            <div className="font-bold text-green-600">{formatCurrency(adsCodeSummary['GG002'].totalNilaiLangganan)}</div>
-                            <div className="text-xs text-slate-500">total nilai</div>
-                          </TableCell>
-                        </TableRow>
-                        {/* GG002 Accordion */}
-                        {expandedAdsCode === 'GG002' && (
-                          <TableRow className="bg-green-50 border-b border-green-200">
-                            <TableCell colSpan={7} className="py-0 px-0">
-                              <div className="px-8 py-4">
-                                <div className="bg-white rounded-lg shadow-sm border border-green-200 p-4">
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                                    <Target className="h-4 w-4 mr-2 text-green-600" />
-                                    Detail ID Ads untuk Kode GG002
-                                  </h4>
-                                  <div className="space-y-2">
-                                    {adsData['GG002'].map((ad, index) => (
-                                      <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
-                                          <p className="text-xs text-slate-600">{ad.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3 text-xs">
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Prospek</p>
-                                            <p className="font-bold text-slate-900">{ad.prospek}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Leads</p>
-                                            <p className="font-bold text-green-600">{ad.leads}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR Leads</p>
-                                            <p className="font-bold text-green-600">{ad.ctr}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR Customer</p>
-                                            <p className="font-bold text-green-600">
-                                              {((ad.customer / ad.leads) * 100).toFixed(1)}%
-                                            </p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Customer</p>
-                                            <p className="font-bold text-green-600">{ad.customer}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Nilai Langganan</p>
-                                            <p className="font-bold text-green-600">{formatCurrency(ad.totalNilaiLangganan)}</p>
+                                {/* Accordion for ID Ads */}
+                                {expandedAdsCode === kodeAds.kode && kodeAds.idAds && kodeAds.idAds.length > 0 && (
+                                  <TableRow className={`bg-${color}-50 border-b border-${color}-200`}>
+                                    <TableCell colSpan={7} className="py-0 px-0">
+                                      <div className="px-8 py-4">
+                                        <div className={`bg-white rounded-lg shadow-sm border border-${color}-200 p-4`}>
+                                          <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
+                                            <Target className={`h-4 w-4 mr-2 text-${color}-600`} />
+                                            Detail ID Ads untuk Kode {kodeAds.kode}
+                                          </h4>
+                                          <div className="space-y-2">
+                                            {kodeAds.idAds.map((ad) => (
+                                              <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
+                                                <div className="flex-1">
+                                                  <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
+                                                </div>
+                                                <div className="flex items-center gap-3 text-xs">
+                                                  <div className="text-center">
+                                                    <p className="text-slate-500">Prospek</p>
+                                                    <p className="font-bold text-slate-900">{ad.prospek}</p>
+                                                  </div>
+                                                  <div className="text-center">
+                                                    <p className="text-slate-500">Leads</p>
+                                                    <p className={`font-bold text-${color}-600`}>{ad.leads}</p>
+                                                  </div>
+                                                  <div className="text-center">
+                                                    <p className="text-slate-500">CTR Leads</p>
+                                                    <p className="font-bold text-green-600">{ad.ctr}</p>
+                                                  </div>
+                                                  <div className="text-center">
+                                                    <p className="text-slate-500">CTR Customer</p>
+                                                    <p className="font-bold text-green-600">{ad.ctrCustomer}</p>
+                                                  </div>
+                                                  <div className="text-center">
+                                                    <p className="text-slate-500">Customer</p>
+                                                    <p className={`font-bold text-${color}-600`}>{ad.customer}</p>
+                                                  </div>
+                                                  <div className="text-center">
+                                                    <p className="text-slate-500">Nilai Langganan</p>
+                                                    <p className="font-bold text-green-600">{formatCurrency(ad.totalNilaiLangganan)}</p>
+                                                  </div>
+                                                </div>
+                                              </div>
+                                            ))}
                                           </div>
                                         </div>
                                       </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-
-                        {/* FB003 Row */}
-                        <TableRow 
-                          className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
-                          onClick={() => toggleAdsCodeAccordion('FB003')}
-                        >
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs rounded-full border-orange-300 bg-orange-50 text-orange-700 font-medium px-3 py-1 font-mono">
-                                FB003
-                              </Badge>
-                              {expandedAdsCode === 'FB003' ? 
-                                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
-                                <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
-                              }
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{adsCodeSummary['FB003'].prospek}</TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{adsCodeSummary['FB003'].leads}</TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div className="w-4 h-2 bg-orange-500 rounded-full"></div>
-                              </div>
-                              <span className="text-sm font-bold text-orange-600">{adsCodeSummary['FB003'].ctr}%</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div 
-                                  className="h-2 bg-green-500 rounded-full"
-                                  style={{width: `${Math.min(((adsCodeSummary['FB003'].customer / adsCodeSummary['FB003'].leads) * 100) * 2, 100)}%`}}
-                                ></div>
-                              </div>
-                              <span className="text-sm font-bold text-green-600">
-                                {((adsCodeSummary['FB003'].customer / adsCodeSummary['FB003'].leads) * 100).toFixed(1)}%
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                            <div className="flex items-center gap-1">
-                              <Users className="h-4 w-4 text-orange-500" />
-                              <span className="font-bold text-orange-600">{adsCodeSummary['FB003'].customer}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                            <div className="font-bold text-green-600">{formatCurrency(adsCodeSummary['FB003'].totalNilaiLangganan)}</div>
-                            <div className="text-xs text-slate-500">total nilai</div>
-                          </TableCell>
-                        </TableRow>
-                        {/* FB003 Accordion */}
-                        {expandedAdsCode === 'FB003' && (
-                          <TableRow className="bg-orange-50 border-b border-orange-200">
-                            <TableCell colSpan={4} className="py-0 px-0">
-                              <div className="px-8 py-4">
-                                <div className="bg-white rounded-lg shadow-sm border border-orange-200 p-4">
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                                    <Target className="h-4 w-4 mr-2 text-orange-600" />
-                                    Detail ID Ads untuk Kode FB003
-                                  </h4>
-                                  <div className="space-y-2">
-                                    {adsData['FB003'].map((ad, index) => (
-                                      <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
-                                          <p className="text-xs text-slate-600">{ad.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs">
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Prospek</p>
-                                            <p className="font-bold text-slate-900">{ad.prospek}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Leads</p>
-                                            <p className="font-bold text-orange-600">{ad.leads}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR</p>
-                                            <p className="font-bold text-green-600">{ad.ctr}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-
-                        {/* IG004 Row */}
-                        <TableRow 
-                          className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
-                          onClick={() => toggleAdsCodeAccordion('IG004')}
-                        >
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs rounded-full border-purple-300 bg-purple-50 text-purple-700 font-medium px-3 py-1 font-mono">
-                                IG004
-                              </Badge>
-                              {expandedAdsCode === 'IG004' ? 
-                                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
-                                <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
-                              }
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">352</TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">73</TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div className="w-5 h-2 bg-purple-500 rounded-full"></div>
-                              </div>
-                              <span className="text-sm font-bold text-purple-600">20.7%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {/* IG004 Accordion */}
-                        {expandedAdsCode === 'IG004' && (
-                          <TableRow className="bg-purple-50 border-b border-purple-200">
-                            <TableCell colSpan={4} className="py-0 px-0">
-                              <div className="px-8 py-4">
-                                <div className="bg-white rounded-lg shadow-sm border border-purple-200 p-4">
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                                    <Target className="h-4 w-4 mr-2 text-purple-600" />
-                                    Detail ID Ads untuk Kode IG004
-                                  </h4>
-                                  <div className="space-y-2">
-                                    {adsData['IG004'].map((ad, index) => (
-                                      <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
-                                          <p className="text-xs text-slate-600">{ad.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs">
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Prospek</p>
-                                            <p className="font-bold text-slate-900">{ad.prospek}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Leads</p>
-                                            <p className="font-bold text-purple-600">{ad.leads}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR</p>
-                                            <p className="font-bold text-green-600">{ad.ctr}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-
-                        {/* WA005 Row */}
-                        <TableRow 
-                          className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
-                          onClick={() => toggleAdsCodeAccordion('WA005')}
-                        >
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs rounded-full border-indigo-300 bg-indigo-50 text-indigo-700 font-medium px-3 py-1 font-mono">
-                                WA005
-                              </Badge>
-                              {expandedAdsCode === 'WA005' ? 
-                                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
-                                <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
-                              }
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">289</TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">45</TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div className="w-4 h-2 bg-indigo-500 rounded-full"></div>
-                              </div>
-                              <span className="text-sm font-bold text-indigo-600">15.6%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {/* WA005 Accordion */}
-                        {expandedAdsCode === 'WA005' && (
-                          <TableRow className="bg-indigo-50 border-b border-indigo-200">
-                            <TableCell colSpan={4} className="py-0 px-0">
-                              <div className="px-8 py-4">
-                                <div className="bg-white rounded-lg shadow-sm border border-indigo-200 p-4">
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                                    <Target className="h-4 w-4 mr-2 text-indigo-600" />
-                                    Detail ID Ads untuk Kode WA005
-                                  </h4>
-                                  <div className="space-y-2">
-                                    {adsData['WA005'].map((ad, index) => (
-                                      <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
-                                          <p className="text-xs text-slate-600">{ad.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs">
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Prospek</p>
-                                            <p className="font-bold text-slate-900">{ad.prospek}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Leads</p>
-                                            <p className="font-bold text-indigo-600">{ad.leads}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR</p>
-                                            <p className="font-bold text-green-600">{ad.ctr}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-
-                        {/* GAD006 Row */}
-                        <TableRow 
-                          className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200 cursor-pointer"
-                          onClick={() => toggleAdsCodeAccordion('GAD006')}
-                        >
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <Badge variant="outline" className="text-xs rounded-full border-emerald-300 bg-emerald-50 text-emerald-700 font-medium px-3 py-1 font-mono">
-                                GAD006
-                              </Badge>
-                              {expandedAdsCode === 'GAD006' ? 
-                                <ChevronDown className="h-4 w-4 text-slate-500 transition-transform duration-200" /> : 
-                                <ChevronRight className="h-4 w-4 text-slate-500 transition-transform duration-200" />
-                              }
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">312</TableCell>
-                          <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">46</TableCell>
-                          <TableCell className="py-4 px-4">
-                            <div className="flex items-center gap-2">
-                              <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                <div className="w-4 h-2 bg-emerald-500 rounded-full"></div>
-                              </div>
-                              <span className="text-sm font-bold text-emerald-600">14.7%</span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                        {/* GAD006 Accordion */}
-                        {expandedAdsCode === 'GAD006' && (
-                          <TableRow className="bg-emerald-50 border-b border-emerald-200">
-                            <TableCell colSpan={4} className="py-0 px-0">
-                              <div className="px-8 py-4">
-                                <div className="bg-white rounded-lg shadow-sm border border-emerald-200 p-4">
-                                  <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center">
-                                    <Target className="h-4 w-4 mr-2 text-emerald-600" />
-                                    Detail ID Ads untuk Kode GAD006
-                                  </h4>
-                                  <div className="space-y-2">
-                                    {adsData['GAD006'].map((ad, index) => (
-                                      <div key={ad.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition-colors">
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium text-slate-900 font-mono">{ad.id}</p>
-                                          <p className="text-xs text-slate-600">{ad.name}</p>
-                                        </div>
-                                        <div className="flex items-center gap-4 text-xs">
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Prospek</p>
-                                            <p className="font-bold text-slate-900">{ad.prospek}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">Leads</p>
-                                            <p className="font-bold text-emerald-600">{ad.leads}</p>
-                                          </div>
-                                          <div className="text-center">
-                                            <p className="text-slate-500">CTR</p>
-                                            <p className="font-bold text-green-600">{ad.ctr}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
+                            )
+                          })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={7} className="py-8 text-center text-slate-500">
+                              Tidak ada data kode ads untuk periode ini
                             </TableCell>
                           </TableRow>
                         )}
@@ -2331,6 +2068,7 @@ export default function LaporanPage() {
                 </CardContent>
               </Card>
             </div>
+            )}
           </TabsContent>
 
           {/* Layanan Tab */}

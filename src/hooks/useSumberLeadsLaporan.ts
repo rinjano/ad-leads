@@ -14,7 +14,9 @@ export interface SumberLeadsLaporanData {
 interface SumberLeadsLaporanResponse {
   success: boolean
   data: SumberLeadsLaporanData[]
-  organikBreakdown?: SumberLeadsLaporanData[]
+  breakdown?: {
+    organik: SumberLeadsLaporanData[]
+  }
   filter: string
   dateRange: {
     start: string | null

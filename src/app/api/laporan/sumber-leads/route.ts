@@ -181,7 +181,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: groupedData,
-      organikBreakdown,
+      breakdown: {
+        organik: organikBreakdown
+      },
       filter,
       dateRange: {
         start: startDate,
