@@ -41,6 +41,7 @@ import {
 import { useSumberLeadsLaporan } from '@/hooks/useSumberLeadsLaporan'
 import { useLaporanSummary } from '@/hooks/useLaporanSummary'
 import { useKodeAdsLaporan } from '@/hooks/useKodeAdsLaporan'
+import { useLayananLaporan } from '@/hooks/useLayananLaporan'
 
 export default function LaporanPage() {
   const [dateRange, setDateRange] = useState('thismonth')
@@ -69,6 +70,13 @@ export default function LaporanPage() {
     customEndDate
   )
 
+  // Fetch Layanan data from database
+  const { data: layananLaporanData, isLoading: layananLoading, error: layananError, refetch: refetchLayanan } = useLayananLaporan(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
   // Handle date range change
   const handleDateRangeChange = (e) => {
     const value = e.target.value
@@ -82,12 +90,14 @@ export default function LaporanPage() {
       refetchSummary()
       refetchSumberLeads()
       refetchKodeAds()
+      refetchLayanan()
     } else if (dateRange !== 'custom') {
       refetchSummary()
       refetchSumberLeads()
       refetchKodeAds()
+      refetchLayanan()
     }
-  }, [dateRange, customStartDate, customEndDate, refetchSummary, refetchSumberLeads, refetchKodeAds])
+  }, [dateRange, customStartDate, customEndDate, refetchSummary, refetchSumberLeads, refetchKodeAds, refetchLayanan])
   
   // State untuk accordion Kode Ads
   const [expandedAdsCode, setExpandedAdsCode] = useState(null)
@@ -212,6 +222,22 @@ export default function LaporanPage() {
     return sumberLeadsData?.breakdown?.organik ?? []
   }, [sumberLeadsData])
 
+  // Process layanan data from API with colors
+  const layananData = useMemo(() => {
+    const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
+    
+    if (!layananLaporanData?.data || layananLaporanData.data.length === 0) {
+      return []
+    }
+    
+    return layananLaporanData.data.map((item, index) => ({
+      ...item,
+      name: item.layanan,
+      ctr: item.ctrLeads,
+      color: colorClasses[index % colorClasses.length]
+    }))
+  }, [layananLaporanData])
+
   // Data untuk Kota/Kabupaten
   const kotaData = [
     { name: 'Jakarta', prospek: 553, leads: 145, ctr: 26.2, customer: 112, totalNilaiLangganan: 280000000, color: 'blue' },
@@ -262,18 +288,6 @@ export default function LaporanPage() {
     { name: 'James Brown', prospek: 238, leads: 48, ctr: 20.2, customer: 36, totalNilaiLangganan: 90000000, color: 'emerald' },
     { name: 'Anna Davis', prospek: 221, leads: 42, ctr: 19.0, customer: 32, totalNilaiLangganan: 80000000, color: 'pink' },
     { name: 'Tom Garcia', prospek: 198, leads: 37, ctr: 18.7, customer: 28, totalNilaiLangganan: 70000000, color: 'teal' }
-  ]
-
-  // Data untuk Layanan
-  const layananData = [
-    { name: 'Konsultasi Medis', prospek: 478, leads: 142, ctr: 29.7, customer: 108, totalNilaiLangganan: 270000000, color: 'blue' },
-    { name: 'Medical Check-up', prospek: 421, leads: 118, ctr: 28.0, customer: 89, totalNilaiLangganan: 222500000, color: 'green' },
-    { name: 'Laboratorium', prospek: 389, leads: 95, ctr: 24.4, customer: 72, totalNilaiLangganan: 180000000, color: 'purple' },
-    { name: 'Radiologi', prospek: 342, leads: 78, ctr: 22.8, customer: 58, totalNilaiLangganan: 145000000, color: 'orange' },
-    { name: 'Farmasi', prospek: 298, leads: 67, ctr: 22.5, customer: 49, totalNilaiLangganan: 122500000, color: 'indigo' },
-    { name: 'Fisioterapi', prospek: 267, leads: 58, ctr: 21.7, customer: 42, totalNilaiLangganan: 105000000, color: 'emerald' },
-    { name: 'Gizi & Nutrisi', prospek: 234, leads: 48, ctr: 20.5, customer: 35, totalNilaiLangganan: 87500000, color: 'pink' },
-    { name: 'Telemedicine', prospek: 198, leads: 39, ctr: 19.7, customer: 28, totalNilaiLangganan: 70000000, color: 'teal' }
   ]
 
   // Data untuk Tipe Faskes
