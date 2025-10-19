@@ -122,8 +122,8 @@ export async function GET(request: NextRequest) {
       const data = adsSpendMap.get(key);
       data.prospek.push(prospek);
 
-      // Check if it's a lead
-      if (statusLeads && prospek.statusLeadsId === statusLeads.id) {
+      // Check if it's a lead: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      if (prospek.tanggalJadiLeads !== null || (statusLeads && prospek.statusLeadsId === statusLeads.id)) {
         data.leads.push(prospek);
       }
 

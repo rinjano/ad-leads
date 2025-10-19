@@ -440,8 +440,8 @@ export default function TambahProspekPage() {
         layananAssist: Array.isArray(formData.layananAssist) 
           ? formData.layananAssist.join(', ') 
           : formData.layananAssist,
-        // Only include tanggalJadiLeads if status is "Leads"
-        tanggalJadiLeads: formData.statusLeads === "Leads" ? formData.tanggalJadiLeads : null
+        // Set tanggalJadiLeads if status is "Leads", otherwise keep existing value (don't reset to null)
+        tanggalJadiLeads: formData.statusLeads === "Leads" ? formData.tanggalJadiLeads : formData.tanggalJadiLeads
       };
       
       // Submit to database

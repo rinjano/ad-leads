@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
       }
 
       const data = tipeFaskesMap.get(keyId)!
-      const isLead = leadsStatusId && prospek.statusLeadsId === leadsStatusId
+      const isLead = prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)
       const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
 
       data.prospek.add(prospekId)

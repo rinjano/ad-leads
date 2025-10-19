@@ -91,9 +91,10 @@ export async function GET(request: NextRequest) {
 
     // Calculate statistics
     const totalProspek = allProspek.length;
-    const totalLeads = leadsStatusId 
-      ? allProspek.filter(p => p.statusLeadsId === leadsStatusId).length 
-      : 0;
+    // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+    const totalLeads = allProspek.filter(p => 
+      p.tanggalJadiLeads !== null || (leadsStatusId && p.statusLeadsId === leadsStatusId)
+    ).length;
     const totalSpam = allProspek.filter(p => p.bukanLeadsId !== null).length;
     
     const ctrLeads = totalProspek > 0 ? ((totalLeads / totalProspek) * 100).toFixed(1) : '0.0';
@@ -129,9 +130,10 @@ export async function GET(request: NextRequest) {
         where: previousDateFilter,
       });
       previousTotalProspek = previousProspek.length;
-      previousTotalLeads = leadsStatusId 
-        ? previousProspek.filter(p => p.statusLeadsId === leadsStatusId).length 
-        : 0;
+      // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      previousTotalLeads = previousProspek.filter(p => 
+        p.tanggalJadiLeads !== null || (leadsStatusId && p.statusLeadsId === leadsStatusId)
+      ).length;
       previousTotalSpam = previousProspek.filter(p => p.bukanLeadsId !== null).length;
     }
 
@@ -167,15 +169,19 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      const dayLeads = leadsStatusId ? await prisma.prospek.count({
+      // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      const dayLeads = await prisma.prospek.count({
         where: {
           tanggalProspek: {
             gte: startOfDay,
             lt: endOfDay,
           },
-          statusLeadsId: leadsStatusId,
+          OR: [
+            { tanggalJadiLeads: { not: null } },
+            ...(leadsStatusId ? [{ statusLeadsId: leadsStatusId }] : [])
+          ]
         },
-      }) : 0;
+      });
 
       // Count customers (prospek with konversi_customer)
       const dayCustomers = await prisma.konversi_customer.count({

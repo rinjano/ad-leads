@@ -121,8 +121,8 @@ export async function GET(request: NextRequest) {
       const data = sumberLeadsMap.get(sumberName)!
       data.prospek++
       
-      // Count leads (statusLeadsId matches "Leads")
-      if (leadsStatusId && prospek.statusLeadsId === leadsStatusId) {
+      // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      if (prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)) {
         data.leads++
       }
 

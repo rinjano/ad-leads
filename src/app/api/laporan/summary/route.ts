@@ -81,13 +81,16 @@ export async function GET(request: NextRequest) {
     })
     const leadsStatusId = statusLeads?.id
 
-    // Count leads (where statusLeadsId matches "Leads")
-    const totalLeads = leadsStatusId ? await prisma.prospek.count({
+    // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+    const totalLeads = await prisma.prospek.count({
       where: {
         ...dateFilter,
-        statusLeadsId: leadsStatusId
+        OR: [
+          { tanggalJadiLeads: { not: null } },
+          ...(leadsStatusId ? [{ statusLeadsId: leadsStatusId }] : [])
+        ]
       }
-    }) : 0
+    })
 
     // Calculate CTR Leads percentage
     const ctrLeads = totalProspek > 0 

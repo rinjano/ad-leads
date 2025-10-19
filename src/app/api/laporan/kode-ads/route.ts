@@ -132,8 +132,8 @@ export async function GET(request: NextRequest) {
       const data = kodeAdsMap.get(kodeAdsCode)!
       data.prospek++
       
-      // Count leads (statusLeadsId matches "Leads")
-      if (leadsStatusId && prospek.statusLeadsId === leadsStatusId) {
+      // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      if (prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)) {
         data.leads++
       }
 
@@ -168,8 +168,8 @@ export async function GET(request: NextRequest) {
         const idAdsData = data.idAds.get(idAdsKey)!
         idAdsData.prospek++
 
-        // Count leads for this ID Ads
-        if (leadsStatusId && prospek.statusLeadsId === leadsStatusId) {
+        // Count leads for this ID Ads: prospek yang pernah jadi leads ATAU status saat ini adalah Leads
+        if (prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)) {
           idAdsData.leads++
         }
 

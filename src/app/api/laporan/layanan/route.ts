@@ -118,7 +118,8 @@ export async function GET(request: NextRequest) {
     // Process prospek data
     allProspek.forEach(prospek => {
       const prospekId = prospek.id
-      const isLead = leadsStatusId && prospek.statusLeadsId === leadsStatusId ? true : false
+      // Check if lead: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      const isLead = prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)
       const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
 
       // CASE 1: Prospek with conversions - group by layanan from konversi_customer_item

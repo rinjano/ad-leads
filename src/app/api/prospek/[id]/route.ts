@@ -141,7 +141,11 @@ export async function PUT(
       where: { id: prospekId },
       data: {
         tanggalProspek: new Date(tanggalProspek),
-        tanggalJadiLeads: tanggalJadiLeads && tanggalJadiLeads.trim() !== '' ? new Date(tanggalJadiLeads) : null,
+        // Only update tanggalJadiLeads if it's explicitly provided
+        // If undefined/not provided, keep existing value (don't reset to null)
+        ...(tanggalJadiLeads !== undefined && {
+          tanggalJadiLeads: tanggalJadiLeads && tanggalJadiLeads.trim() !== '' ? new Date(tanggalJadiLeads) : null
+        }),
         sumberLeadsId: sumberLeadsRecord.id,
         kodeAdsId: kodeAdsRecord?.id || null,
         idAds: idAds || null,
