@@ -176,26 +176,20 @@ export async function GET(request: NextRequest) {
         ? ((totalNilaiLangganan / totalCustomers - costPerCustomer) / costPerCustomer) * 100 
         : 0;
 
-      // Generate dummy history from current data (jika ada budget/spent)
-      const budgetHistory = [];
-      const spentHistory = [];
+      // Get actual history from database
+      let budgetHistory: any[] = [];
+      let spentHistory: any[] = [];
       
-      if (budgetData && budget > 0) {
-        budgetHistory.push({
-          amount: budget,
-          note: `Budget untuk ${kodeAds?.kode || 'Unknown'} - ${sumberLeads?.nama || 'Unknown'}`,
-          date: budgetData.createdAt || new Date(),
-          addedBy: budgetData.createdBy || 'Admin'
-        });
-      }
-      
-      if (budgetData && spent > 0) {
-        spentHistory.push({
-          amount: spent,
-          note: `Total spending untuk ${kodeAds?.kode || 'Unknown'} - ${sumberLeads?.nama || 'Unknown'}`,
-          date: budgetData.updatedAt || new Date(),
-          updatedBy: budgetData.updatedBy || 'Admin'
-        });
+      if (budgetData) {
+        // Get budget history from JSON field
+        budgetHistory = ((budgetData.budgetHistory as any[]) || []).sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        
+        // Get spend history from JSON field
+        spentHistory = ((budgetData.spentHistory as any[]) || []).sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       }
 
       return {

@@ -67,30 +67,77 @@ export async function POST(request: NextRequest) {
     });
 
     let result;
+    let historyRecorded = false;
     
     if (existing) {
       // Update existing budget
+      const newBudgetAmount = budget !== undefined ? parseFloat(budget) : existing.budget;
+      const newSpentAmount = spent !== undefined ? parseFloat(spent) : existing.spent;
+      
       result = await prisma.adsBudget.update({
         where: {
           id: existing.id,
         },
         data: {
-          budget: budget !== undefined ? parseFloat(budget) : existing.budget,
-          spent: spent !== undefined ? parseFloat(spent) : existing.spent,
+          budget: newBudgetAmount,
+          spent: newSpentAmount,
           updatedBy: createdBy || existing.updatedBy,
         },
         include: {
           kodeAds: true,
         },
       });
+
+      // Record history for budget increase
+      if (budget !== undefined && newBudgetAmount !== existing.budget) {
+        const budgetDifference = newBudgetAmount - existing.budget;
+        const budgetHistory = ((result.budgetHistory as any[]) || []);
+        budgetHistory.push({
+          id: Date.now(),
+          type: 'budget',
+          amount: budgetDifference,
+          note: `Budget adjustment from ${existing.budget} to ${newBudgetAmount}`,
+          createdBy: createdBy || 'System',
+          createdAt: new Date().toISOString(),
+        });
+        
+        await prisma.adsBudget.update({
+          where: { id: existing.id },
+          data: { budgetHistory },
+        });
+        historyRecorded = true;
+      }
+
+      // Record history for spent increase
+      if (spent !== undefined && newSpentAmount !== existing.spent) {
+        const spentDifference = newSpentAmount - existing.spent;
+        const spentHistory = ((result.spentHistory as any[]) || []);
+        spentHistory.push({
+          id: Date.now() + 1, // Ensure unique ID
+          type: 'spend',
+          amount: spentDifference,
+          note: `Spend adjustment from ${existing.spent} to ${newSpentAmount}`,
+          createdBy: createdBy || 'System',
+          createdAt: new Date().toISOString(),
+        });
+        
+        await prisma.adsBudget.update({
+          where: { id: existing.id },
+          data: { spentHistory },
+        });
+        historyRecorded = true;
+      }
     } else {
       // Create new budget
+      const newBudgetAmount = budget ? parseFloat(budget) : 0;
+      const newSpentAmount = spent ? parseFloat(spent) : 0;
+      
       result = await prisma.adsBudget.create({
         data: {
           kodeAdsId: parseInt(kodeAdsId),
           sumberLeadsId: parseInt(sumberLeadsId),
-          budget: budget ? parseFloat(budget) : 0,
-          spent: spent ? parseFloat(spent) : 0,
+          budget: newBudgetAmount,
+          spent: newSpentAmount,
           periode,
           createdBy: createdBy || 'System',
           updatedBy: createdBy || 'System',
@@ -99,12 +146,46 @@ export async function POST(request: NextRequest) {
           kodeAds: true,
         },
       });
+
+      // Record initial history
+      if (newBudgetAmount > 0) {
+        const budgetHistory = [{
+          id: Date.now(),
+          type: 'budget',
+          amount: newBudgetAmount,
+          note: `Initial budget created`,
+          createdBy: createdBy || 'System',
+          createdAt: new Date().toISOString(),
+        }];
+        
+        await prisma.adsBudget.update({
+          where: { id: result.id },
+          data: { budgetHistory },
+        });
+      }
+
+      if (newSpentAmount > 0) {
+        const spentHistory = [{
+          id: Date.now() + 1,
+          type: 'spend',
+          amount: newSpentAmount,
+          note: `Initial spend recorded`,
+          createdBy: createdBy || 'System',
+          createdAt: new Date().toISOString(),
+        }];
+        
+        await prisma.adsBudget.update({
+          where: { id: result.id },
+          data: { spentHistory },
+        });
+      }
     }
 
     return NextResponse.json({
       success: true,
       data: result,
       message: existing ? 'Budget updated successfully' : 'Budget created successfully',
+      historyRecorded,
     });
   } catch (error) {
     console.error('Error creating/updating ads budget:', error);
@@ -132,18 +213,51 @@ export async function PUT(request: NextRequest) {
       );
     }
 
+    // Get current budget to calculate difference
+    const currentBudget = await prisma.adsBudget.findUnique({
+      where: { id: parseInt(id) },
+    });
+
+    if (!currentBudget) {
+      return NextResponse.json(
+        { success: false, error: 'Budget not found' },
+        { status: 404 }
+      );
+    }
+
+    const newSpentAmount = parseFloat(spent as string);
+    const spentDifference = newSpentAmount - currentBudget.spent;
+
     const result = await prisma.adsBudget.update({
       where: {
         id: parseInt(id),
       },
       data: {
-        spent: parseFloat(spent),
+        spent: newSpentAmount,
         updatedBy: updatedBy || 'System',
       },
       include: {
         kodeAds: true,
       },
     });
+
+    // Record spend history
+    if (spentDifference !== 0) {
+      const spentHistory = ((result.spentHistory as any[]) || []);
+      spentHistory.push({
+        id: Date.now(),
+        type: 'spend',
+        amount: spentDifference,
+        note: `Spend update from ${currentBudget.spent} to ${newSpentAmount}`,
+        createdBy: updatedBy || 'System',
+        createdAt: new Date().toISOString(),
+      });
+
+      await prisma.adsBudget.update({
+        where: { id: parseInt(id) },
+        data: { spentHistory },
+      });
+    }
 
     return NextResponse.json({
       success: true,

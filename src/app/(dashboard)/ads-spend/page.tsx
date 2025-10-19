@@ -1534,11 +1534,11 @@ export default function AdsSpendPage() {
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3 flex-shrink-0" />
                                 <span className="break-all">
-                                  {new Date(history.date).toLocaleDateString("id-ID", {
+                                  {new Date(history.createdAt).toLocaleDateString("id-ID", {
                                     day: "2-digit",
                                     month: "short", 
                                     year: "numeric"
-                                  })} {new Date(history.date).toLocaleTimeString("id-ID", {
+                                  })} {new Date(history.createdAt).toLocaleTimeString("id-ID", {
                                     hour: "2-digit",
                                     minute: "2-digit"
                                   })}
@@ -1546,7 +1546,7 @@ export default function AdsSpendPage() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3 flex-shrink-0" />
-                                <span className="font-medium">{history.addedBy}</span>
+                                <span className="font-medium">{history.createdBy}</span>
                               </div>
                             </div>
                           </div>
@@ -1589,11 +1589,11 @@ export default function AdsSpendPage() {
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3 flex-shrink-0" />
                                 <span className="break-all">
-                                  {new Date(history.date).toLocaleDateString("id-ID", {
+                                  {new Date(history.createdAt).toLocaleDateString("id-ID", {
                                     day: "2-digit",
                                     month: "short", 
                                     year: "numeric"
-                                  })} {new Date(history.date).toLocaleTimeString("id-ID", {
+                                  })} {new Date(history.createdAt).toLocaleTimeString("id-ID", {
                                     hour: "2-digit",
                                     minute: "2-digit"
                                   })}
@@ -1601,7 +1601,7 @@ export default function AdsSpendPage() {
                               </div>
                               <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3 flex-shrink-0" />
-                                <span className="font-medium">{history.updatedBy}</span>
+                                <span className="font-medium">{history.createdBy}</span>
                               </div>
                             </div>
                           </div>

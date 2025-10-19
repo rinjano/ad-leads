@@ -10,13 +10,13 @@ datasource db {
 }
 
 model User {
+  id          Int           @id @default(autoincrement())
   email       String        @unique
+  password    String
   name        String
   companyId   Int?
   createdAt   DateTime      @default(now())
-  password    String
   updatedAt   DateTime      @updatedAt
-  id          Int           @id @default(autoincrement())
   role        UserRole      @default(user)
   userKodeAds UserKodeAds[]
 
@@ -53,8 +53,8 @@ model KodeAds {
   status      String        @default("aktif")
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  userKodeAds UserKodeAds[]
   adsBudget   AdsBudget[]
+  userKodeAds UserKodeAds[]
 
   @@map("kode_ads")
 }
@@ -65,7 +65,9 @@ model AdsBudget {
   sumberLeadsId Int
   budget        Float    @default(0)
   spent         Float    @default(0)
-  periode       String   // Format: "YYYY-MM" untuk tracking bulanan
+  periode       String
+  budgetHistory Json     @default("[]")
+  spentHistory  Json     @default("[]")
   createdBy     String?
   updatedBy     String?
   createdAt     DateTime @default(now())
@@ -74,6 +76,18 @@ model AdsBudget {
 
   @@unique([kodeAdsId, sumberLeadsId, periode])
   @@map("ads_budget")
+}
+
+model AdsBudgetHistory {
+  id          Int      @id @default(autoincrement())
+  adsBudgetId Int
+  type        String
+  amount      Float
+  note        String?
+  createdBy   String?
+  createdAt   DateTime @default(now())
+
+  @@map("ads_budget_history")
 }
 
 model UserKodeAds {
