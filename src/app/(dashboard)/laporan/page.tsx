@@ -238,7 +238,13 @@ export default function LaporanPage() {
     if (!sumberLeadsData?.data || sumberLeadsData.data.length === 0) {
       return []
     }
-    return sumberLeadsData.data
+    // Sort data: Organik selalu di posisi paling atas
+    const sorted = [...sumberLeadsData.data].sort((a, b) => {
+      if (a.name === 'Organik') return -1
+      if (b.name === 'Organik') return 1
+      return 0
+    })
+    return sorted
   }, [sumberLeadsData])
 
   // Data organik individual untuk accordion, ambil dari server agar konsisten
@@ -2009,11 +2015,9 @@ export default function LaporanPage() {
                       <TableHeader>
                         <TableRow className="bg-slate-50 border-b-2 border-slate-200">
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Layanan</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Prospek</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Leads</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Customer</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Total Nilai Langganan</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Leads</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Customer</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -2047,9 +2051,6 @@ export default function LaporanPage() {
                               </Badge>
                             </TableCell>
                             <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                              {layanan.prospek.toLocaleString()}
-                            </TableCell>
-                            <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
                               {layanan.leads}
                             </TableCell>
                             <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
@@ -2061,41 +2062,6 @@ export default function LaporanPage() {
                             <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
                               <div className="font-bold text-green-600">{formatCurrency(layanan.totalNilaiLangganan)}</div>
                               <div className="text-xs text-slate-500">total nilai</div>
-                            </TableCell>
-                            <TableCell className="py-4 px-4">
-                              <div className="flex items-center gap-2">
-                                <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                  <div 
-                                    className={`h-2 rounded-full ${
-                                      layanan.color === 'blue' ? 'bg-blue-500'
-                                      : layanan.color === 'green' ? 'bg-green-500'
-                                      : layanan.color === 'purple' ? 'bg-purple-500'
-                                      : layanan.color === 'orange' ? 'bg-orange-500'
-                                      : layanan.color === 'indigo' ? 'bg-indigo-500'
-                                      : layanan.color === 'emerald' ? 'bg-emerald-500'
-                                      : layanan.color === 'pink' ? 'bg-pink-500'
-                                      : layanan.color === 'teal' ? 'bg-teal-500'
-                                      : 'bg-slate-500'
-                                    }`}
-                                    style={{width: `${Math.min(layanan.ctr * 3, 100)}%`}}
-                                  ></div>
-                                </div>
-                                <span 
-                                  className={`text-sm font-bold ${
-                                    layanan.color === 'blue' ? 'text-blue-600'
-                                    : layanan.color === 'green' ? 'text-green-600'
-                                    : layanan.color === 'purple' ? 'text-purple-600'
-                                    : layanan.color === 'orange' ? 'text-orange-600'
-                                    : layanan.color === 'indigo' ? 'text-indigo-600'
-                                    : layanan.color === 'emerald' ? 'text-emerald-600'
-                                    : layanan.color === 'pink' ? 'text-pink-600'
-                                    : layanan.color === 'teal' ? 'text-teal-600'
-                                    : 'text-slate-600'
-                                  }`}
-                                >
-                                  {layanan.ctr.toFixed(1)}%
-                                </span>
-                              </div>
                             </TableCell>
                             <TableCell className="py-4 px-4">
                               <div className="flex items-center gap-2">
@@ -2361,7 +2327,6 @@ export default function LaporanPage() {
                       <TableHeader>
                         <TableRow className="bg-slate-50 border-b-2 border-slate-200">
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Kota/Kabupaten</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Prospek</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Leads</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Customer</TableHead>
                           <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Total Nilai Langganan</TableHead>
@@ -2400,7 +2365,6 @@ export default function LaporanPage() {
                                   {kota.name}
                                 </Badge>
                               </TableCell>
-                              <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{kota.prospek.toLocaleString()}</TableCell>
                               <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{kota.leads}</TableCell>
                               <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
                                 <div className="flex items-center gap-1">

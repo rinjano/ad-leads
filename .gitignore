@@ -41,3 +41,11 @@ yarn-error.log*
 next-env.d.ts
 
 /generated/prisma
+
+# database backups (don't commit sensitive data)
+/backups/
+*.sql
+
+# logs
+/logs/
+*.log

@@ -356,7 +356,7 @@ const getStatusBadge = (status) => {
       className: "text-xs rounded-full bg-transparent text-blue-700 border border-blue-300 font-medium px-3 py-1 inline-block my-1"
     },
     "Leads": {
-      className: "text-xs rounded-full bg-transparent text-green-700 border border-green-300 font-medium px-3 py-1 inline-block my-1"
+      className: "text-xs rounded-full bg-transparent text-blue-700 border border-blue-300 font-medium px-3 py-1 inline-block my-1"
     },
     "Bukan Leads": {
       className: "text-xs rounded-full bg-transparent text-red-700 border border-red-300 font-medium px-3 py-1 inline-block my-1"
@@ -2037,7 +2037,6 @@ value={filters.customEndDate}
                           </div>
                           <div>
                             <div className="font-semibold text-slate-900">{prospect.prospectName}</div>
-                            <div className="text-sm text-slate-500">ID: {prospect.id}</div>
                           </div>
                         </div>
                       </TableCell>
