@@ -42,6 +42,8 @@ import { useSumberLeadsLaporan } from '@/hooks/useSumberLeadsLaporan'
 import { useLaporanSummary } from '@/hooks/useLaporanSummary'
 import { useKodeAdsLaporan } from '@/hooks/useKodeAdsLaporan'
 import { useLayananLaporan } from '@/hooks/useLayananLaporan'
+import { useTipeFaskesLaporan } from '@/hooks/useTipeFaskesLaporan'
+import { useKotaLaporan } from '@/hooks/useKotaLaporan'
 
 export default function LaporanPage() {
   const [dateRange, setDateRange] = useState('thismonth')
@@ -77,6 +79,20 @@ export default function LaporanPage() {
     customEndDate
   )
 
+  // Fetch Tipe Faskes data from database
+  const { data: tipeFaskesLaporanData, isLoading: tipeFaskesLoading, error: tipeFaskesError, refetch: refetchTipeFaskes } = useTipeFaskesLaporan(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
+  // Fetch Kota data from database
+  const { data: kotaLaporanData, isLoading: kotaLoading, error: kotaError, refetch: refetchKota } = useKotaLaporan(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
   // Handle date range change
   const handleDateRangeChange = (e) => {
     const value = e.target.value
@@ -91,13 +107,17 @@ export default function LaporanPage() {
       refetchSumberLeads()
       refetchKodeAds()
       refetchLayanan()
+      refetchTipeFaskes()
+      refetchKota()
     } else if (dateRange !== 'custom') {
       refetchSummary()
       refetchSumberLeads()
       refetchKodeAds()
       refetchLayanan()
+      refetchTipeFaskes()
+      refetchKota()
     }
-  }, [dateRange, customStartDate, customEndDate, refetchSummary, refetchSumberLeads, refetchKodeAds, refetchLayanan])
+  }, [dateRange, customStartDate, customEndDate, refetchSummary, refetchSumberLeads, refetchKodeAds, refetchLayanan, refetchTipeFaskes, refetchKota])
   
   // State untuk accordion Kode Ads
   const [expandedAdsCode, setExpandedAdsCode] = useState(null)
@@ -238,27 +258,37 @@ export default function LaporanPage() {
     }))
   }, [layananLaporanData])
 
-  // Data untuk Kota/Kabupaten
-  const kotaData = [
-    { name: 'Jakarta', prospek: 553, leads: 145, ctr: 26.2, customer: 112, totalNilaiLangganan: 280000000, color: 'blue' },
-    { name: 'Surabaya', prospek: 458, leads: 98, ctr: 21.4, customer: 78, totalNilaiLangganan: 195000000, color: 'green' },
-    { name: 'Bandung', prospek: 399, leads: 87, ctr: 21.8, customer: 67, totalNilaiLangganan: 167500000, color: 'purple' },
-    { name: 'Medan', prospek: 381, leads: 72, ctr: 18.9, customer: 54, totalNilaiLangganan: 135000000, color: 'orange' },
-    { name: 'Makassar', prospek: 307, leads: 68, ctr: 22.1, customer: 51, totalNilaiLangganan: 127500000, color: 'indigo' },
-    { name: 'Semarang', prospek: 333, leads: 65, ctr: 19.5, customer: 48, totalNilaiLangganan: 120000000, color: 'emerald' },
-    { name: 'Yogyakarta', prospek: 238, leads: 58, ctr: 24.3, customer: 43, totalNilaiLangganan: 107500000, color: 'pink' },
-    { name: 'Palembang', prospek: 302, leads: 52, ctr: 17.2, customer: 35, totalNilaiLangganan: 87500000, color: 'teal' },
-    { name: 'Denpasar', prospek: 239, leads: 48, ctr: 20.1, customer: 36, totalNilaiLangganan: 90000000, color: 'red' },
-    { name: 'Balikpapan', prospek: 217, leads: 43, ctr: 19.8, customer: 32, totalNilaiLangganan: 80000000, color: 'cyan' },
-    { name: 'Padang', prospek: 230, leads: 38, ctr: 16.5, customer: 28, totalNilaiLangganan: 70000000, color: 'amber' },
-    { name: 'Manado', prospek: 187, leads: 35, ctr: 18.7, customer: 26, totalNilaiLangganan: 65000000, color: 'lime' },
-    { name: 'Pontianak', prospek: 201, leads: 32, ctr: 15.9, customer: 23, totalNilaiLangganan: 57500000, color: 'violet' },
-    { name: 'Pekanbaru', prospek: 168, leads: 29, ctr: 17.3, customer: 21, totalNilaiLangganan: 52500000, color: 'rose' },
-    { name: 'Jambi', prospek: 161, leads: 26, ctr: 16.1, customer: 18, totalNilaiLangganan: 45000000, color: 'sky' },
-    { name: 'Banjarmasin', prospek: 162, leads: 24, ctr: 14.8, customer: 16, totalNilaiLangganan: 40000000, color: 'slate' },
-    { name: 'Kupang', prospek: 159, leads: 21, ctr: 13.2, customer: 14, totalNilaiLangganan: 35000000, color: 'neutral' },
-    { name: 'Mataram', prospek: 115, leads: 18, ctr: 15.6, customer: 12, totalNilaiLangganan: 30000000, color: 'stone' }
-  ]
+  // Process tipe faskes data from API with colors
+  const tipeFaskesData = useMemo(() => {
+    const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
+    
+    if (!tipeFaskesLaporanData?.data || tipeFaskesLaporanData.data.length === 0) {
+      return []
+    }
+    
+    return tipeFaskesLaporanData.data.map((item, index) => ({
+      ...item,
+      name: item.label,
+      ctr: item.ctrLeads,
+      color: colorClasses[index % colorClasses.length]
+    }))
+  }, [tipeFaskesLaporanData])
+
+  // Process kota data from API with colors
+  const kotaData = useMemo(() => {
+    const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
+    
+    if (!kotaLaporanData?.data || kotaLaporanData.data.length === 0) {
+      return []
+    }
+    
+    return kotaLaporanData.data.map((item, index) => ({
+      ...item,
+      name: item.kota,
+      ctr: item.ctrLeads,
+      color: colorClasses[index % colorClasses.length]
+    }))
+  }, [kotaLaporanData])
 
   // Fungsi untuk pagination Kota/Kabupaten
   const kotaTotalItems = kotaData.length
@@ -288,18 +318,6 @@ export default function LaporanPage() {
     { name: 'James Brown', prospek: 238, leads: 48, ctr: 20.2, customer: 36, totalNilaiLangganan: 90000000, color: 'emerald' },
     { name: 'Anna Davis', prospek: 221, leads: 42, ctr: 19.0, customer: 32, totalNilaiLangganan: 80000000, color: 'pink' },
     { name: 'Tom Garcia', prospek: 198, leads: 37, ctr: 18.7, customer: 28, totalNilaiLangganan: 70000000, color: 'teal' }
-  ]
-
-  // Data untuk Tipe Faskes
-  const tipeFaskesData = [
-    { name: 'Rumah Sakit', prospek: 534, leads: 156, ctr: 29.2, customer: 125, totalNilaiLangganan: 312500000, color: 'blue' },
-    { name: 'Klinik', prospek: 467, leads: 128, ctr: 27.4, customer: 96, totalNilaiLangganan: 240000000, color: 'green' },
-    { name: 'Puskesmas', prospek: 398, leads: 89, ctr: 22.4, customer: 67, totalNilaiLangganan: 167500000, color: 'purple' },
-    { name: 'Praktik Dokter', prospek: 312, leads: 73, ctr: 23.4, customer: 54, totalNilaiLangganan: 135000000, color: 'orange' },
-    { name: 'Apotek', prospek: 289, leads: 65, ctr: 22.5, customer: 48, totalNilaiLangganan: 120000000, color: 'indigo' },
-    { name: 'Lab Diagnostik', prospek: 256, leads: 52, ctr: 20.3, customer: 38, totalNilaiLangganan: 95000000, color: 'emerald' },
-    { name: 'RS Khusus', prospek: 198, leads: 41, ctr: 20.7, customer: 29, totalNilaiLangganan: 72500000, color: 'pink' },
-    { name: 'Klinik Gigi', prospek: 167, leads: 34, ctr: 20.4, customer: 24, totalNilaiLangganan: 60000000, color: 'teal' }
   ]
 
   const [searchTerm, setSearchTerm] = useState('')
