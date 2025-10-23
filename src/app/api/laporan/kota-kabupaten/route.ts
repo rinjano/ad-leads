@@ -12,83 +12,144 @@ export async function GET(request: NextRequest) {
 
     // Calculate date range based on filter
     const now = new Date()
-    let dateFilter: any = {}
-
+    // Pisahkan filter prospek dan leads
+    let prospekFilter: any = {}
+    let leadsFilter: any = {}
     if (filter === 'custom' && startDate && endDate) {
-      dateFilter = {
+      prospekFilter = {
         tanggalProspek: {
+          gte: new Date(startDate),
+          lte: new Date(endDate)
+        }
+      }
+      leadsFilter = {
+        tanggalJadiLeads: {
+          not: null,
           gte: new Date(startDate),
           lte: new Date(endDate)
         }
       }
     } else {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
       switch (filter) {
         case 'today':
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: today
             }
           }
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: today
+            }
+          }
           break
-        case 'yesterday':
+        case 'yesterday': {
           const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-          dateFilter = {
+          yesterday.setDate(today.getDate() - 1)
+          prospekFilter = {
             tanggalProspek: {
               gte: yesterday,
               lt: today
             }
           }
-          break
-        case 'thisweek':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: yesterday,
+              lt: today
+            }
+          }
+          break;
+        }
+        case 'thisweek': {
           const startOfWeek = new Date(today)
           startOfWeek.setDate(today.getDate() - today.getDay())
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfWeek
             }
           }
-          break
-        case 'thismonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfWeek
+            }
+          }
+          break;
+        }
+        case 'thismonth': {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfMonth
             }
           }
-          break
-        case 'lastmonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfMonth
+            }
+          }
+          break;
+        }
+        case 'lastmonth': {
           const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfLastMonth,
               lte: endOfLastMonth
             }
           }
-          break
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfLastMonth,
+              lte: endOfLastMonth
+            }
+          }
+          break;
+        }
       }
     }
 
-    // Build where clause
-    const where: any = { ...dateFilter }
+    // Build where clause for prospek and leads
+    const prospekWhere: any = { ...prospekFilter }
+    const leadsWhere: any = { ...leadsFilter }
 
     if (layanan && layanan !== 'null' && layanan !== '') {
-      where.layananAssistId = {
+      prospekWhere.layananAssistId = {
+        contains: layanan,
+        mode: 'insensitive'
+      }
+      leadsWhere.layananAssistId = {
         contains: layanan,
         mode: 'insensitive'
       }
     }
 
     if (sumber && sumber !== 'null' && sumber !== '') {
-      where.sumberLeadsId = parseInt(sumber)
+      prospekWhere.sumberLeadsId = parseInt(sumber)
+      leadsWhere.sumberLeadsId = parseInt(sumber)
     }
 
     // Get all prospek with filters
     const allProspek = await prisma.prospek.findMany({
-      where,
+      where: prospekWhere,
+      include: {
+        konversi_customer: {
+          include: {
+            konversi_customer_item: true
+          }
+        }
+      }
+    })
+
+    // Get all leads with filters
+    const allLeads = await prisma.prospek.findMany({
+      where: leadsWhere,
       include: {
         konversi_customer: {
           include: {
@@ -113,6 +174,7 @@ export async function GET(request: NextRequest) {
       totalNilaiLangganan: number
     }>()
 
+    // Process prospek
     allProspek.forEach(prospek => {
       const prospekId = prospek.id
       const kota = prospek.kota || 'Unknown'
@@ -133,20 +195,39 @@ export async function GET(request: NextRequest) {
       }
 
       const data = kotaMap.get(kota)!
-      const isLead = prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)
-      const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
-
       data.prospek.add(prospekId)
-      
-      if (isLead) {
-        data.leads.add(prospekId)
+    })
+
+    // Process leads
+    allLeads.forEach(lead => {
+      const leadId = lead.id
+      const kota = lead.kota || 'Unknown'
+
+      if (!lead.kota) {
+        // Skip if no kota info
+        return
       }
+
+      if (!kotaMap.has(kota)) {
+        kotaMap.set(kota, {
+          kota,
+          prospek: new Set(),
+          leads: new Set(),
+          customer: new Set(),
+          totalNilaiLangganan: 0
+        })
+      }
+
+      const data = kotaMap.get(kota)!
+      const hasCustomer = lead.konversi_customer && lead.konversi_customer.length > 0
+
+      data.leads.add(leadId)
       
       if (hasCustomer) {
-        data.customer.add(prospekId)
+        data.customer.add(leadId)
         
         // Add total nilai from conversions
-        prospek.konversi_customer.forEach(konversi => {
+        lead.konversi_customer.forEach(konversi => {
           if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
             konversi.konversi_customer_item.forEach(item => {
               data.totalNilaiLangganan += item.nilaiTransaksi || 0

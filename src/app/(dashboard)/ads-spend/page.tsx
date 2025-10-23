@@ -57,14 +57,21 @@ const previousMonthData = {
   avgROI: 182.1
 };
 
+// Updated History interface to align with AdsBudgetHistory model
+interface History {
+  type: string;
+  amount: number;
+  note?: string;
+  createdBy?: string;
+  createdAt: string | Date;
+}
+
 export default function AdsSpendPage() {
-  // Filter waktu states
-  const [showTimeFilter, setShowTimeFilter] = useState(false);
-  const [timeFilterType, setTimeFilterType] = useState("current-month");
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  // Filter waktu style laporan
+  const [dateRange, setDateRange] = useState('thismonth');
+  const [showCustomDate, setShowCustomDate] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -105,14 +112,73 @@ export default function AdsSpendPage() {
     fetchLayanan();
   }, []);
 
-  // Fetch ads spend data from API
-  const { data: adsSpendResponse, isLoading, error, refetch } = useAdsSpend(
-    timeFilterType === 'year-month' ? 'year-month' : timeFilterType,
-    timeFilterType === 'year-month' ? selectedYear : undefined,
-    timeFilterType === 'year-month' ? selectedMonth : undefined,
-    timeFilterType === 'custom' ? customStartDate : undefined,
-    timeFilterType === 'custom' ? customEndDate : undefined
+
+  // Handle date range change
+  const handleDateRangeChange = (e) => {
+    const value = e.target.value
+    setDateRange(value)
+    setShowCustomDate(value === 'custom')
+  }
+
+  // Map laporan-style dateRange to API filter
+  const getApiFilter = (range: string) => {
+    switch (range) {
+      case 'today': return 'today';
+      case 'yesterday': return 'yesterday';
+      case 'thisweek': return 'this-week';
+      case 'thismonth': return 'current-month';
+      case 'lastmonth': return 'year-month';
+      case 'custom': return 'custom';
+      default: return 'current-month';
+    }
+  };
+
+  // For 'lastmonth', calculate year and month
+  const [lastMonthYear, setLastMonthYear] = useState<number | undefined>(undefined);
+  const [lastMonth, setLastMonth] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    if (dateRange === 'lastmonth') {
+      const now = new Date();
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      setLastMonthYear(prevMonth.getFullYear());
+      setLastMonth(prevMonth.getMonth() + 1); // JS month is 0-based
+    } else {
+      setLastMonthYear(undefined);
+      setLastMonth(undefined);
+    }
+  }, [dateRange]);
+
+  // Compose filter params for useAdsSpend
+  const apiFilter = getApiFilter(dateRange);
+  const adsSpendQuery = useAdsSpend(
+    apiFilter,
+    apiFilter === 'year-month' ? lastMonthYear : undefined,
+    apiFilter === 'year-month' ? lastMonth : undefined,
+    apiFilter === 'custom' ? customStartDate : undefined,
+    apiFilter === 'custom' ? customEndDate : undefined
   );
+  const { data: adsSpendResponse, isLoading, error, refetch } = adsSpendQuery;
+
+  // Auto refetch on filter change (match laporan)
+  useEffect(() => {
+    console.log('Filter changed:', { apiFilter, customStartDate, customEndDate }); // Debug log
+    if (apiFilter === 'custom' && customStartDate && customEndDate) {
+      refetch();
+    } else if (apiFilter !== 'custom') {
+      refetch();
+    }
+  }, [apiFilter, customStartDate, customEndDate, refetch]);
+
+  // Debug log to verify API response
+  useEffect(() => {
+    console.log('API Response Data:', adsSpendResponse); // Debug log to verify API response
+  }, [adsSpendResponse]);
+
+  // Debug log for filter parameters
+  useEffect(() => {
+    console.log('Filter Parameters:', { apiFilter, customStartDate, customEndDate }); // Debug log for filter parameters
+  }, [apiFilter, customStartDate, customEndDate]);
 
   const adsSpendData = adsSpendResponse?.data || [];
   const totals = adsSpendResponse?.totals || {
@@ -158,7 +224,7 @@ export default function AdsSpendPage() {
     // Filter by selected layanan
     if (selectedLayanan) {
       filtered = filtered.filter(ads => 
-        ads.layanan && ads.layanan.toLowerCase().includes(selectedLayanan.toLowerCase())
+        ads.layanan?.toLowerCase().includes(selectedLayanan.toLowerCase())
       );
     }
     
@@ -480,100 +546,40 @@ export default function AdsSpendPage() {
         </CardHeader>
       </Card>
 
-      {/* Filter Waktu */}
+      {/* Filter Waktu style laporan */}
       <Card className="bg-white shadow-lg border-slate-200">
         <CardContent className="p-4">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-slate-500" />
-              <span className="text-sm font-medium text-slate-700">Filter Periode:</span>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant={timeFilterType === "current-month" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTimeFilterType("current-month")}
-                className="text-xs"
-              >
-                Bulan Ini
-              </Button>
-              
-              <div className="relative">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowTimeFilter(!showTimeFilter)}
-                  className="text-xs flex items-center gap-1"
-                >
-                  Tahun & Bulan <ChevronDown className="h-3 w-3" />
-                </Button>
-                
-                {showTimeFilter && (
-                  <div className="absolute top-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg p-4 z-10 min-w-[200px]">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-medium text-slate-700 mb-1 block">Tahun</label>
-                        <select
-                          value={selectedYear}
-                          onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                          className="w-full text-xs border border-slate-300 rounded-lg bg-white px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
-                        >
-                          {yearOptions.map(year => (
-                            <option key={year} value={year}>{year}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium text-slate-700 mb-1 block">Bulan</label>
-                        <select
-                          value={selectedMonth}
-                          onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                          className="w-full text-xs border border-slate-300 rounded-lg bg-white px-3 py-2 focus:border-blue-500 focus:ring-blue-500"
-                        >
-                          {monthNames.map((month, index) => (
-                            <option key={index + 1} value={index + 1}>{month}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <Button
-                variant={timeFilterType === "all-time" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTimeFilterType("all-time")}
-                className="text-xs"
-              >
-                Semua Periode
-              </Button>
-
-              <Button
-                variant={timeFilterType === "custom" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTimeFilterType("custom")}
-                className="text-xs"
-              >
-                Custom
-              </Button>
-            </div>
-
-            {timeFilterType === "custom" && (
-              <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-slate-500" />
+            <span className="text-sm font-medium text-slate-700">Periode:</span>
+            <select
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              className="text-sm border border-slate-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-slate-50 transition-colors"
+            >
+              <option value="today">Hari Ini</option>
+              <option value="yesterday">Kemarin</option>
+              <option value="thisweek">Minggu Ini</option>
+              <option value="thismonth">Bulan Ini</option>
+              <option value="lastmonth">Bulan Lalu</option>
+              <option value="custom">Custom</option>
+            </select>
+            {showCustomDate && (
+              <div className="flex items-center gap-2 ml-2">
                 <Input
                   type="date"
                   value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="text-xs h-8 w-36"
+                  onChange={e => setCustomStartDate(e.target.value)}
+                  className="text-sm border border-slate-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="Dari tanggal"
                 />
-                <span className="text-xs text-slate-500">sampai</span>
+                <span className="text-slate-500 text-sm">s/d</span>
                 <Input
                   type="date"
                   value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="text-xs h-8 w-36"
+                  onChange={e => setCustomEndDate(e.target.value)}
+                  className="text-sm border border-slate-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  placeholder="Sampai tanggal"
                 />
               </div>
             )}
@@ -1510,6 +1516,7 @@ export default function AdsSpendPage() {
                         <Wallet className="h-4 w-4 text-green-600" />
                       </div>
                       History Tambah Budget
+
                     </h5>
                     <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                       {selectedAds?.budgetHistory && selectedAds.budgetHistory.length > 0 ? (

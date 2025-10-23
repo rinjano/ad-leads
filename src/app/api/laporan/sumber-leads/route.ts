@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
     })
     const leadsStatusId = statusLeads?.id
 
-    // Group by sumber leads and calculate statistics
+    // Inisialisasi map sumber leads dari semua sumber leads yang muncul di prospek maupun leads
     const sumberLeadsMap = new Map<string, {
       id: number
       name: string
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
       totalNilaiLangganan: number
     }>()
 
-    // Hitung prospek per sumber dari allProspek
+    // Masukkan semua sumber leads yang muncul di prospek
     allProspek.forEach(prospek => {
       const sumberLeads = sumberLeadsMapById.get(prospek.sumberLeadsId)
       const sumberName = sumberLeads?.nama || 'Unknown'
@@ -171,18 +171,42 @@ export async function GET(request: NextRequest) {
           totalNilaiLangganan: 0
         })
       }
-      const data = sumberLeadsMap.get(sumberName)!
-      data.prospek++
-      // Count customer and total nilai langganan from konversi_customer
-      if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
-        data.customer++
-        prospek.konversi_customer.forEach(konversi => {
-          if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
-            konversi.konversi_customer_item.forEach(item => {
-              data.totalNilaiLangganan += item.nilaiTransaksi || 0
-            })
-          }
+    })
+    // Masukkan semua sumber leads yang muncul di leads (jika belum ada di map)
+    allLeads.forEach(lead => {
+      const sumberLeads = sumberLeadsMapById.get(lead.sumberLeadsId)
+      const sumberName = sumberLeads?.nama || 'Unknown'
+      const sumberId = sumberLeads?.id || 0
+      if (!sumberLeadsMap.has(sumberName)) {
+        sumberLeadsMap.set(sumberName, {
+          id: sumberId,
+          name: sumberName,
+          prospek: 0,
+          leads: 0,
+          customer: 0,
+          totalNilaiLangganan: 0
         })
+      }
+    })
+
+    // Hitung prospek per sumber dari allProspek
+    allProspek.forEach(prospek => {
+      const sumberLeads = sumberLeadsMapById.get(prospek.sumberLeadsId)
+      const sumberName = sumberLeads?.nama || 'Unknown'
+      if (sumberLeadsMap.has(sumberName)) {
+        const data = sumberLeadsMap.get(sumberName)!
+        data.prospek++
+        // Count customer and total nilai langganan from konversi_customer
+        if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
+          data.customer++
+          prospek.konversi_customer.forEach(konversi => {
+            if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
+              konversi.konversi_customer_item.forEach(item => {
+                data.totalNilaiLangganan += item.nilaiTransaksi || 0
+              })
+            }
+          })
+        }
       }
     })
     // Hitung leads per sumber dari allLeads

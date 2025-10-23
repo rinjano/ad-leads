@@ -12,68 +12,111 @@ export async function GET(request: NextRequest) {
 
     // Calculate date range based on filter
     const now = new Date()
-    let dateFilter: any = {}
-
+    // Pisahkan filter prospek dan leads
+    let prospekFilter: any = {}
+    let leadsFilter: any = {}
     if (filter === 'custom' && startDate && endDate) {
-      dateFilter = {
+      prospekFilter = {
         tanggalProspek: {
+          gte: new Date(startDate),
+          lte: new Date(endDate)
+        }
+      }
+      leadsFilter = {
+        tanggalJadiLeads: {
+          not: null,
           gte: new Date(startDate),
           lte: new Date(endDate)
         }
       }
     } else {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
       switch (filter) {
         case 'today':
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: today
             }
           }
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: today
+            }
+          }
           break
-        case 'yesterday':
+        case 'yesterday': {
           const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-          dateFilter = {
+          yesterday.setDate(today.getDate() - 1)
+          prospekFilter = {
             tanggalProspek: {
               gte: yesterday,
               lt: today
             }
           }
-          break
-        case 'thisweek':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: yesterday,
+              lt: today
+            }
+          }
+          break;
+        }
+        case 'thisweek': {
           const startOfWeek = new Date(today)
           startOfWeek.setDate(today.getDate() - today.getDay())
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfWeek
             }
           }
-          break
-        case 'thismonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfWeek
+            }
+          }
+          break;
+        }
+        case 'thismonth': {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfMonth
             }
           }
-          break
-        case 'lastmonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfMonth
+            }
+          }
+          break;
+        }
+        case 'lastmonth': {
           const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfLastMonth,
               lte: endOfLastMonth
             }
           }
-          break
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfLastMonth,
+              lte: endOfLastMonth
+            }
+          }
+          break;
+        }
       }
     }
 
     // Build where clause for prospek
-    const prospekWhere: any = { ...dateFilter }
+    const prospekWhere: any = { ...prospekFilter }
 
     if (sumber && sumber !== 'null' && sumber !== '') {
       prospekWhere.sumberLeadsId = parseInt(sumber)
@@ -99,7 +142,7 @@ export async function GET(request: NextRequest) {
       totalNilaiLangganan: number
     }>()
 
-    // ===== APPROACH 1: Get all prospek with their layanan from layananAssistId =====
+    // Ambil semua prospek dan leads sesuai filter
     const allProspek = await prisma.prospek.findMany({
       where: prospekWhere,
       include: {
@@ -114,21 +157,28 @@ export async function GET(request: NextRequest) {
         }
       }
     })
+    const allLeads = await prisma.prospek.findMany({
+      where: leadsFilter,
+      include: {
+        konversi_customer: {
+          include: {
+            konversi_customer_item: {
+              include: {
+                layanan: true
+              }
+            }
+          }
+        }
+      }
+    })
 
-    // Process prospek data
+    // Inisialisasi layananMap dari semua layanan yang muncul di prospek maupun leads
     allProspek.forEach(prospek => {
-      const prospekId = prospek.id
-      // Check if lead: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
-      const isLead = prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)
-      const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
-
-      // CASE 1: Prospek with conversions - group by layanan from konversi_customer_item
       if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
         prospek.konversi_customer.forEach(konversi => {
           if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
             konversi.konversi_customer_item.forEach(item => {
               const layananName = item.layanan?.nama || 'Unknown'
-              
               if (!layananMap.has(layananName)) {
                 layananMap.set(layananName, {
                   layanan: layananName,
@@ -138,40 +188,19 @@ export async function GET(request: NextRequest) {
                   totalNilaiLangganan: 0
                 })
               }
-              
-              const data = layananMap.get(layananName)!
-              data.prospek.add(prospekId)
-              
-              if (isLead) {
-                data.leads.add(prospekId)
-              }
-              
-              if (hasCustomer) {
-                data.customer.add(prospekId)
-              }
-              
-              data.totalNilaiLangganan += item.nilaiTransaksi || 0
             })
           }
         })
       } else if (prospek.layananAssistId) {
-        // CASE 2: Prospek without conversions - use layananAssistId as fallback
-        // layananAssistId might contain multiple services separated by comma or might be IDs
         const layananItems = prospek.layananAssistId
           .split(',')
           .map((s: string) => s.trim())
           .filter((s: string) => s.length > 0)
-        
         layananItems.forEach((layananItem: string) => {
-          // Try to resolve as ID first, then as name
           let layananName = layananItem
-          
-          // If it looks like an ID (all digits), try to resolve it
           if (/^\d+$/.test(layananItem) && layananById.has(layananItem)) {
             layananName = layananById.get(layananItem)!
           }
-          // Otherwise treat it as a name directly
-          
           if (!layananMap.has(layananName)) {
             layananMap.set(layananName, {
               layanan: layananName,
@@ -181,14 +210,124 @@ export async function GET(request: NextRequest) {
               totalNilaiLangganan: 0
             })
           }
-          
+        })
+      }
+    })
+    allLeads.forEach(prospek => {
+      if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
+        prospek.konversi_customer.forEach(konversi => {
+          if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
+            konversi.konversi_customer_item.forEach(item => {
+              const layananName = item.layanan?.nama || 'Unknown'
+              if (!layananMap.has(layananName)) {
+                layananMap.set(layananName, {
+                  layanan: layananName,
+                  prospek: new Set(),
+                  leads: new Set(),
+                  customer: new Set(),
+                  totalNilaiLangganan: 0
+                })
+              }
+            })
+          }
+        })
+      } else if (prospek.layananAssistId) {
+        const layananItems = prospek.layananAssistId
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0)
+        layananItems.forEach((layananItem: string) => {
+          let layananName = layananItem
+          if (/^\d+$/.test(layananItem) && layananById.has(layananItem)) {
+            layananName = layananById.get(layananItem)!
+          }
+          if (!layananMap.has(layananName)) {
+            layananMap.set(layananName, {
+              layanan: layananName,
+              prospek: new Set(),
+              leads: new Set(),
+              customer: new Set(),
+              totalNilaiLangganan: 0
+            })
+          }
+        })
+      }
+    })
+
+    // Process prospek data
+    allProspek.forEach(prospek => {
+      const prospekId = prospek.id
+      const isLead = prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)
+      const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
+      if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
+        prospek.konversi_customer.forEach(konversi => {
+          if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
+            konversi.konversi_customer_item.forEach(item => {
+              const layananName = item.layanan?.nama || 'Unknown'
+              const data = layananMap.get(layananName)!
+              data.prospek.add(prospekId)
+              if (isLead) {
+                data.leads.add(prospekId)
+              }
+              if (hasCustomer) {
+                data.customer.add(prospekId)
+              }
+              data.totalNilaiLangganan += item.nilaiTransaksi || 0
+            })
+          }
+        })
+      } else if (prospek.layananAssistId) {
+        const layananItems = prospek.layananAssistId
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0)
+        layananItems.forEach((layananItem: string) => {
+          let layananName = layananItem
+          if (/^\d+$/.test(layananItem) && layananById.has(layananItem)) {
+            layananName = layananById.get(layananItem)!
+          }
           const data = layananMap.get(layananName)!
           data.prospek.add(prospekId)
-          
           if (isLead) {
             data.leads.add(prospekId)
           }
-          
+          if (hasCustomer) {
+            data.customer.add(prospekId)
+          }
+        })
+      }
+    })
+    // Process leads data
+    allLeads.forEach(prospek => {
+      const prospekId = prospek.id
+      const isLead = true
+      const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
+      if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
+        prospek.konversi_customer.forEach(konversi => {
+          if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
+            konversi.konversi_customer_item.forEach(item => {
+              const layananName = item.layanan?.nama || 'Unknown'
+              const data = layananMap.get(layananName)!
+              data.leads.add(prospekId)
+              if (hasCustomer) {
+                data.customer.add(prospekId)
+              }
+              data.totalNilaiLangganan += item.nilaiTransaksi || 0
+            })
+          }
+        })
+      } else if (prospek.layananAssistId) {
+        const layananItems = prospek.layananAssistId
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0)
+        layananItems.forEach((layananItem: string) => {
+          let layananName = layananItem
+          if (/^\d+$/.test(layananItem) && layananById.has(layananItem)) {
+            layananName = layananById.get(layananItem)!
+          }
+          const data = layananMap.get(layananName)!
+          data.leads.add(prospekId)
           if (hasCustomer) {
             data.customer.add(prospekId)
           }

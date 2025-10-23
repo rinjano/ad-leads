@@ -10,49 +10,49 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Calculate date range based on filter
+    // Calculate date range based on filter (using tanggalJadiLeads for leads)
     const now = new Date();
-    let dateFilter: any = {};
+    let prospekFilter: any = {};
+    let leadsFilter: any = {};
 
     switch (filter) {
-      case 'current-month':
+      case 'today': {
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        prospekFilter = {
+          tanggalProspek: {
+            gte: today,
+          },
+        };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            not: null,
+            gte: today,
+          },
+        };
+        break;
+      }
+      case 'thismonth':
+      case 'current-month': {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        dateFilter = {
+        prospekFilter = {
           tanggalProspek: {
             gte: startOfMonth,
           },
         };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            not: null,
+            gte: startOfMonth,
+          },
+        };
         break;
-      case 'year-month':
-        if (year && month) {
-          const startOfSelectedMonth = new Date(parseInt(year), parseInt(month) - 1, 1);
-          const endOfSelectedMonth = new Date(parseInt(year), parseInt(month), 0, 23, 59, 59);
-          dateFilter = {
-            tanggalProspek: {
-              gte: startOfSelectedMonth,
-              lte: endOfSelectedMonth,
-            },
-          };
-        }
-        break;
-      case 'custom':
-        if (startDate && endDate) {
-          dateFilter = {
-            tanggalProspek: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
-            },
-          };
-        }
-        break;
-      case 'all-time':
-        // No date filter
-        break;
+      }
+      // Tambahkan logika filter lainnya jika diperlukan
     }
 
-    // Get all prospek with related data
-    const allProspek = await prisma.prospek.findMany({
-      where: dateFilter,
+    // Get all leads with related data (filter by tanggalJadiLeads)
+    const allLeads = await prisma.prospek.findMany({
+      where: leadsFilter,
       include: {
         konversi_customer: {
           include: {
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     // Group prospek by kodeAdsId and sumberLeadsId combination
     const adsSpendMap = new Map<string, any>();
 
-    allProspek.forEach(prospek => {
+    allLeads.forEach(prospek => {
       if (!prospek.kodeAdsId || !prospek.sumberLeadsId) return;
 
       // Check if sumber leads is an ads channel
@@ -120,12 +120,9 @@ export async function GET(request: NextRequest) {
       }
 
       const data = adsSpendMap.get(key);
+      // Since allLeads already contains only leads, add to both prospek and leads
       data.prospek.push(prospek);
-
-      // Check if it's a lead: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
-      if (prospek.tanggalJadiLeads !== null || (statusLeads && prospek.statusLeadsId === statusLeads.id)) {
-        data.leads.push(prospek);
-      }
+      data.leads.push(prospek);
 
       // Check if it's a customer
       if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
@@ -218,26 +215,34 @@ export async function GET(request: NextRequest) {
     });
 
     // Calculate totals
-    const totalProspek = adsSpendData.reduce((sum, item) => sum + item.prospek, 0);
-    const totalLeads = adsSpendData.reduce((sum, item) => sum + item.leads, 0);
     const totalBudget = adsSpendData.reduce((sum, item) => sum + item.budget, 0);
     const totalAdsSpend = adsSpendData.reduce((sum, item) => sum + item.totalAdsSpend, 0);
     const sisaBudget = totalBudget - totalAdsSpend;
-    const avgCostPerLead = totalLeads > 0 ? totalAdsSpend / totalLeads : 0;
-    const avgCTRLeads = totalProspek > 0 ? (totalLeads / totalProspek) * 100 : 0;
     const totalCustomer = adsSpendData.reduce((sum, item) => sum + item.jumlahCustomer, 0);
-    const avgCostPerCustomer = totalCustomer > 0 ? totalAdsSpend / totalCustomer : 0;
     const totalNilaiLangganan = adsSpendData.reduce((sum, item) => sum + item.totalNilaiLangganan, 0);
     const avgROI = adsSpendData.length > 0 
       ? adsSpendData.reduce((sum, item) => sum + item.roi, 0) / adsSpendData.length 
       : 0;
 
+    // Pindahkan deklarasi totalProspek dan totalLeads ke bagian awal
+    const totalProspek = await prisma.prospek.count({ where: prospekFilter });
+    const totalLeads = await prisma.prospek.count({ where: leadsFilter });
+
+    // Hitung avgCostPerLead dan avgCTRLeads setelah deklarasi
+    const avgCostPerLead = totalLeads > 0 ? totalAdsSpend / totalLeads : 0;
+    const avgCTRLeads = totalProspek > 0 ? (totalLeads / totalProspek) * 100 : 0;
+
+    // Deklarasi avgCostPerCustomer
+    const avgCostPerCustomer = totalCustomer > 0 ? totalAdsSpend / totalCustomer : 0;
+
+    // Tambahkan totalProspek dan totalLeads ke respons
     return NextResponse.json({
       success: true,
       data: adsSpendData,
       totals: {
         totalProspek,
         totalLeads,
+        ctrLeads: avgCTRLeads,
         totalBudget,
         totalAdsSpend,
         sisaBudget,

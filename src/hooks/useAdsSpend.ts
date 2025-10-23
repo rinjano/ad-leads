@@ -22,6 +22,7 @@ export interface AdsSpendItem {
   lastEditDate?: string;
   budgetHistory?: any[];
   spentHistory?: any[];
+  layanan?: string; // Menambahkan properti layanan untuk menghindari error
 }
 
 export interface AdsSpendTotals {
@@ -58,6 +59,8 @@ export function useAdsSpend(
   startDate?: string,
   endDate?: string
 ) {
+  console.log('useAdsSpend called with:', { filter, year, month, startDate, endDate }); // Debug log
+
   return useQuery<AdsSpendResponse>({
     queryKey: ['adsSpend', filter, year, month, startDate, endDate],
     queryFn: async () => {
@@ -70,12 +73,18 @@ export function useAdsSpend(
       if (filter === 'custom' && startDate && endDate) {
         url += `&startDate=${startDate}&endDate=${endDate}`;
       }
-      
+
+      console.log('Fetching data from URL:', url); // Debug log
+
       const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch ads spend data');
       }
-      return response.json();
+
+      const data = await response.json();
+      console.log('API response:', data); // Debug log
+
+      return data;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   });

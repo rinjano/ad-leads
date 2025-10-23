@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -19,6 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { kodeAdsSchema, type KodeAdsInput } from '@/lib/validations/kode-ads'
 import { Badge } from '@/components/ui/badge'
 
+
 export function KodeAdsTab() {
   const [showModal, setShowModal] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
@@ -27,11 +28,32 @@ export function KodeAdsTab() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [kodeAdsToDelete, setKodeAdsToDelete] = useState<any>(null)
 
-  // Fetch kode ads data
-  const { data: kodeAdsList = [], isLoading } = useKodeAds()
+  // Filter waktu (periode)
+  const [dateRange, setDateRange] = useState('thismonth')
+  const [showCustomDate, setShowCustomDate] = useState(false)
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+
+  // Fetch kode ads data dengan filter waktu
+  const { data: kodeAdsList = [], isLoading, refetch } = useKodeAds(dateRange, customStartDate, customEndDate)
   const createMutation = useCreateKodeAds()
   const updateMutation = useUpdateKodeAds()
   const deleteMutation = useDeleteKodeAds()
+  // Handle date range change
+  const handleDateRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value
+    setDateRange(value)
+    setShowCustomDate(value === 'custom')
+  }
+
+  // Refetch data when filter changes
+  useEffect(() => {
+    if (dateRange === 'custom' && customStartDate && customEndDate) {
+      refetch()
+    } else if (dateRange !== 'custom') {
+      refetch()
+    }
+  }, [dateRange, customStartDate, customEndDate, refetch])
 
   // Form for create
   const {
@@ -128,24 +150,61 @@ export function KodeAdsTab() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Cari kode ads..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-slate-50 border-slate-200 h-10 w-full focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-          />
+      {/* Filter Periode Waktu ala laporan */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-slate-700">Periode:</span>
+          <select
+            value={dateRange}
+            onChange={handleDateRangeChange}
+            className="text-sm border border-slate-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white hover:bg-slate-50 transition-colors"
+          >
+            <option value="today">Hari Ini</option>
+            <option value="yesterday">Kemarin</option>
+            <option value="thisweek">Minggu Ini</option>
+            <option value="thismonth">Bulan Ini</option>
+            <option value="lastmonth">Bulan Lalu</option>
+            <option value="custom">Custom</option>
+          </select>
+          {showCustomDate && (
+            <div className="flex items-center gap-2 ml-2">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="text-sm border border-slate-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                placeholder="Dari tanggal"
+              />
+              <span className="text-slate-500 text-sm">s/d</span>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                className="text-sm border border-slate-300 rounded-md px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                placeholder="Sampai tanggal"
+              />
+            </div>
+          )}
         </div>
-        <Button
-          className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
-          onClick={openModal}
-        >
-          <PlusCircle className="h-4 w-4 mr-2" />
-          Tambah Kode Ads
-        </Button>
+        <div className="flex items-center justify-between w-full md:w-auto">
+          <div className="relative max-w-sm w-full md:w-auto">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+            <Input
+              type="text"
+              placeholder="Cari kode ads..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 bg-slate-50 border-slate-200 h-10 w-full focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+          <Button
+            className="ml-2 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white"
+            onClick={openModal}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Tambah Kode Ads
+          </Button>
+        </div>
       </div>
 
       {/* Add Modal */}

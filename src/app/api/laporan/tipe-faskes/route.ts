@@ -12,68 +12,111 @@ export async function GET(request: NextRequest) {
 
     // Calculate date range based on filter
     const now = new Date()
-    let dateFilter: any = {}
-
+    // Pisahkan filter prospek dan leads
+    let prospekFilter: any = {}
+    let leadsFilter: any = {}
     if (filter === 'custom' && startDate && endDate) {
-      dateFilter = {
+      prospekFilter = {
         tanggalProspek: {
+          gte: new Date(startDate),
+          lte: new Date(endDate)
+        }
+      }
+      leadsFilter = {
+        tanggalJadiLeads: {
+          not: null,
           gte: new Date(startDate),
           lte: new Date(endDate)
         }
       }
     } else {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
       switch (filter) {
         case 'today':
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: today
             }
           }
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: today
+            }
+          }
           break
-        case 'yesterday':
+        case 'yesterday': {
           const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-          dateFilter = {
+          yesterday.setDate(today.getDate() - 1)
+          prospekFilter = {
             tanggalProspek: {
               gte: yesterday,
               lt: today
             }
           }
-          break
-        case 'thisweek':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: yesterday,
+              lt: today
+            }
+          }
+          break;
+        }
+        case 'thisweek': {
           const startOfWeek = new Date(today)
           startOfWeek.setDate(today.getDate() - today.getDay())
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfWeek
             }
           }
-          break
-        case 'thismonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfWeek
+            }
+          }
+          break;
+        }
+        case 'thismonth': {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfMonth
             }
           }
-          break
-        case 'lastmonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfMonth
+            }
+          }
+          break;
+        }
+        case 'lastmonth': {
           const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfLastMonth,
               lte: endOfLastMonth
             }
           }
-          break
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfLastMonth,
+              lte: endOfLastMonth
+            }
+          }
+          break;
+        }
       }
     }
 
     // Build where clause
-    const where: any = { ...dateFilter }
+    const where: any = { ...prospekFilter }
 
     if (provinsi && provinsi !== 'null' && provinsi !== '') {
       where.provinsi = provinsi
@@ -108,7 +151,19 @@ export async function GET(request: NextRequest) {
     const allTipeFaskes = await prisma.tipeFaskes.findMany()
     const tipeFaskesById = new Map(allTipeFaskes.map(t => [t.id, t.nama]))
 
-    // Group by tipe faskes and calculate statistics
+    // Ambil semua prospek dan leads sesuai filter
+    const allLeads = await prisma.prospek.findMany({
+      where: leadsFilter,
+      include: {
+        konversi_customer: {
+          include: {
+            konversi_customer_item: true
+          }
+        }
+      }
+    })
+
+    // Inisialisasi tipeFaskesMap dari semua tipe faskes yang muncul di prospek maupun leads
     const tipeFaskesMap = new Map<number, {
       tipeFaskesId: number
       label: string
@@ -118,20 +173,14 @@ export async function GET(request: NextRequest) {
       totalNilaiLangganan: number
     }>()
 
+    // Dari prospek
     allProspek.forEach(prospek => {
-      const prospekId = prospek.id
       const tipeFaskesId = prospek.tipeFaskesId
       const label = tipeFaskesId && tipeFaskesById.has(tipeFaskesId) 
         ? tipeFaskesById.get(tipeFaskesId)!
         : prospek.namaFaskes || 'Unknown'
-
-      if (!tipeFaskesId && !prospek.namaFaskes) {
-        // Skip if no tipe faskes info
-        return
-      }
-
-      const keyId = tipeFaskesId || 0 // Use 0 for string-based entries
-      
+      if (!tipeFaskesId && !prospek.namaFaskes) return
+      const keyId = tipeFaskesId || 0
       if (!tipeFaskesMap.has(keyId)) {
         tipeFaskesMap.set(keyId, {
           tipeFaskesId: tipeFaskesId || 0,
@@ -142,21 +191,69 @@ export async function GET(request: NextRequest) {
           totalNilaiLangganan: 0
         })
       }
+    })
+    // Dari leads
+    allLeads.forEach(prospek => {
+      const tipeFaskesId = prospek.tipeFaskesId
+      const label = tipeFaskesId && tipeFaskesById.has(tipeFaskesId) 
+        ? tipeFaskesById.get(tipeFaskesId)!
+        : prospek.namaFaskes || 'Unknown'
+      if (!tipeFaskesId && !prospek.namaFaskes) return
+      const keyId = tipeFaskesId || 0
+      if (!tipeFaskesMap.has(keyId)) {
+        tipeFaskesMap.set(keyId, {
+          tipeFaskesId: tipeFaskesId || 0,
+          label,
+          prospek: new Set(),
+          leads: new Set(),
+          customer: new Set(),
+          totalNilaiLangganan: 0
+        })
+      }
+    })
 
+    // Dari prospek
+    allProspek.forEach(prospek => {
+      const prospekId = prospek.id
+      const tipeFaskesId = prospek.tipeFaskesId
+      const label = tipeFaskesId && tipeFaskesById.has(tipeFaskesId) 
+        ? tipeFaskesById.get(tipeFaskesId)!
+        : prospek.namaFaskes || 'Unknown'
+      if (!tipeFaskesId && !prospek.namaFaskes) return
+      const keyId = tipeFaskesId || 0
       const data = tipeFaskesMap.get(keyId)!
       const isLead = prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)
       const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
-
       data.prospek.add(prospekId)
-      
       if (isLead) {
         data.leads.add(prospekId)
       }
-      
       if (hasCustomer) {
         data.customer.add(prospekId)
-        
-        // Add total nilai from conversions
+        prospek.konversi_customer.forEach(konversi => {
+          if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
+            konversi.konversi_customer_item.forEach(item => {
+              data.totalNilaiLangganan += item.nilaiTransaksi || 0
+            })
+          }
+        })
+      }
+    })
+    // Dari leads
+    allLeads.forEach(prospek => {
+      const prospekId = prospek.id
+      const tipeFaskesId = prospek.tipeFaskesId
+      const label = tipeFaskesId && tipeFaskesById.has(tipeFaskesId) 
+        ? tipeFaskesById.get(tipeFaskesId)!
+        : prospek.namaFaskes || 'Unknown'
+      if (!tipeFaskesId && !prospek.namaFaskes) return
+      const keyId = tipeFaskesId || 0
+      const data = tipeFaskesMap.get(keyId)!
+      const isLead = true
+      const hasCustomer = prospek.konversi_customer && prospek.konversi_customer.length > 0
+      data.leads.add(prospekId)
+      if (hasCustomer) {
+        data.customer.add(prospekId)
         prospek.konversi_customer.forEach(konversi => {
           if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
             konversi.konversi_customer_item.forEach(item => {
