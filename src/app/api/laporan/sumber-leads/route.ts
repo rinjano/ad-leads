@@ -10,69 +10,123 @@ export async function GET(request: NextRequest) {
 
     // Calculate date range based on filter
     const now = new Date()
-    let dateFilter: any = {}
-
+    // Pisahkan filter prospek dan leads
+    let prospekFilter: any = {}
+    let leadsFilter: any = {}
     if (filter === 'custom' && startDate && endDate) {
-      dateFilter = {
+      prospekFilter = {
         tanggalProspek: {
+          gte: new Date(startDate),
+          lte: new Date(endDate)
+        }
+      }
+      leadsFilter = {
+        tanggalJadiLeads: {
+          not: null,
           gte: new Date(startDate),
           lte: new Date(endDate)
         }
       }
     } else {
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      
       switch (filter) {
         case 'today':
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: today
             }
           }
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: today
+            }
+          }
           break
-        case 'yesterday':
+        case 'yesterday': {
           const yesterday = new Date(today)
-          yesterday.setDate(yesterday.getDate() - 1)
-          dateFilter = {
+          yesterday.setDate(today.getDate() - 1)
+          prospekFilter = {
             tanggalProspek: {
               gte: yesterday,
               lt: today
             }
           }
-          break
-        case 'thisweek':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: yesterday,
+              lt: today
+            }
+          }
+          break;
+        }
+        case 'thisweek': {
           const startOfWeek = new Date(today)
           startOfWeek.setDate(today.getDate() - today.getDay())
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfWeek
             }
           }
-          break
-        case 'thismonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfWeek
+            }
+          }
+          break;
+        }
+        case 'thismonth': {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfMonth
             }
           }
-          break
-        case 'lastmonth':
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfMonth
+            }
+          }
+          break;
+        }
+        case 'lastmonth': {
           const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
           const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
               gte: startOfLastMonth,
               lte: endOfLastMonth
             }
           }
-          break
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfLastMonth,
+              lte: endOfLastMonth
+            }
+          }
+          break;
+        }
       }
     }
 
-    // Get all prospek with filters
+    // Get all prospek (berdasarkan tanggalProspek)
     const allProspek = await prisma.prospek.findMany({
-      where: dateFilter,
+      where: prospekFilter,
+      include: {
+        konversi_customer: {
+          include: {
+            konversi_customer_item: true
+          }
+        }
+      }
+    })
+    // Get all leads (berdasarkan tanggalJadiLeads)
+    const allLeads = await prisma.prospek.findMany({
+      where: leadsFilter,
       include: {
         konversi_customer: {
           include: {
@@ -102,11 +156,11 @@ export async function GET(request: NextRequest) {
       totalNilaiLangganan: number
     }>()
 
+    // Hitung prospek per sumber dari allProspek
     allProspek.forEach(prospek => {
       const sumberLeads = sumberLeadsMapById.get(prospek.sumberLeadsId)
       const sumberName = sumberLeads?.nama || 'Unknown'
       const sumberId = sumberLeads?.id || 0
-      
       if (!sumberLeadsMap.has(sumberName)) {
         sumberLeadsMap.set(sumberName, {
           id: sumberId,
@@ -117,20 +171,11 @@ export async function GET(request: NextRequest) {
           totalNilaiLangganan: 0
         })
       }
-
       const data = sumberLeadsMap.get(sumberName)!
       data.prospek++
-      
-      // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
-      if (prospek.tanggalJadiLeads !== null || (leadsStatusId && prospek.statusLeadsId === leadsStatusId)) {
-        data.leads++
-      }
-
       // Count customer and total nilai langganan from konversi_customer
       if (prospek.konversi_customer && prospek.konversi_customer.length > 0) {
         data.customer++
-        
-        // Calculate total nilai langganan from all conversion items
         prospek.konversi_customer.forEach(konversi => {
           if (konversi.konversi_customer_item && konversi.konversi_customer_item.length > 0) {
             konversi.konversi_customer_item.forEach(item => {
@@ -138,6 +183,14 @@ export async function GET(request: NextRequest) {
             })
           }
         })
+      }
+    })
+    // Hitung leads per sumber dari allLeads
+    allLeads.forEach(prospek => {
+      const sumberLeads = sumberLeadsMapById.get(prospek.sumberLeadsId)
+      const sumberName = sumberLeads?.nama || 'Unknown'
+      if (sumberLeadsMap.has(sumberName)) {
+        sumberLeadsMap.get(sumberName)!.leads++
       }
     })
 

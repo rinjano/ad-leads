@@ -9,72 +9,118 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
-    // Calculate date ranges based on filter
+    // Pisahkan filter prospek dan leads
     const now = new Date();
-    let dateFilter: any = {};
-
+    let prospekFilter: any = {};
+    let leadsFilter: any = {};
     switch (filter) {
-      case 'today':
+      case 'today': {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        dateFilter = {
+        prospekFilter = {
           tanggalProspek: {
             gte: startOfToday,
           },
         };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            gte: startOfToday,
+          },
+        };
         break;
-      case 'yesterday':
+      }
+      case 'yesterday': {
         const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
         const endOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        dateFilter = {
+        prospekFilter = {
           tanggalProspek: {
             gte: startOfYesterday,
             lt: endOfYesterday,
           },
         };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            gte: startOfYesterday,
+            lt: endOfYesterday,
+          },
+        };
         break;
-      case 'thisweek':
+      }
+      case 'thisweek': {
         const startOfWeek = new Date(now);
         startOfWeek.setDate(now.getDate() - now.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
-        dateFilter = {
+        prospekFilter = {
           tanggalProspek: {
             gte: startOfWeek,
           },
         };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            gte: startOfWeek,
+          },
+        };
         break;
-      case 'thismonth':
+      }
+      case 'thismonth': {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        dateFilter = {
+        prospekFilter = {
           tanggalProspek: {
             gte: startOfMonth,
           },
         };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            gte: startOfMonth,
+          },
+        };
         break;
-      case 'lastmonth':
+      }
+      case 'lastmonth': {
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        dateFilter = {
+        prospekFilter = {
           tanggalProspek: {
             gte: startOfLastMonth,
             lt: endOfLastMonth,
           },
         };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            gte: startOfLastMonth,
+            lt: endOfLastMonth,
+          },
+        };
         break;
-      case 'custom':
+      }
+      case 'custom': {
         if (startDate && endDate) {
-          dateFilter = {
+          prospekFilter = {
             tanggalProspek: {
+              gte: new Date(startDate),
+              lte: new Date(endDate),
+            },
+          };
+          leadsFilter = {
+            tanggalJadiLeads: {
               gte: new Date(startDate),
               lte: new Date(endDate),
             },
           };
         }
         break;
+      }
     }
 
-    // Fetch all prospek data with status leads info
+    // Fetch all prospek data (prospek hari ini)
     const allProspek = await prisma.prospek.findMany({
-      where: dateFilter,
+      where: prospekFilter,
+      include: {
+        konversi_customer: true,
+      },
+    });
+    // Fetch all leads data (leads hari ini)
+    const allLeads = await prisma.prospek.findMany({
+      where: leadsFilter,
       include: {
         konversi_customer: true,
       },
@@ -90,14 +136,13 @@ export async function GET(request: NextRequest) {
     const leadsStatusId = statusLeads?.id;
 
     // Calculate statistics
-    const totalProspek = allProspek.length;
-    // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
-    const totalLeads = allProspek.filter(p => 
-      p.tanggalJadiLeads !== null || (leadsStatusId && p.statusLeadsId === leadsStatusId)
-    ).length;
-    const totalSpam = allProspek.filter(p => p.bukanLeadsId !== null).length;
-    
-    const ctrLeads = totalProspek > 0 ? ((totalLeads / totalProspek) * 100).toFixed(1) : '0.0';
+  // Untuk statistik prospek hari ini, totalProspek = jumlah prospek baru hari ini
+  const totalProspek = allProspek.length;
+  // Untuk statistik leads hari ini, totalLeads = jumlah leads baru hari ini
+  const totalLeads = allLeads.length;
+  // Spam tetap dihitung dari prospek hari ini
+  const totalSpam = allProspek.filter(p => p.bukanLeadsId !== null).length;
+  const ctrLeads = totalProspek > 0 ? ((totalLeads / totalProspek) * 100).toFixed(1) : '0.0';
 
     // Get previous period for comparison
     let previousDateFilter: any = {};
@@ -152,7 +197,7 @@ export async function GET(request: NextRequest) {
     const leadsChange = leadsChangeNum.toFixed(1);
     const spamChange = spamChangeNum.toFixed(1);
 
-    // Get 7-day trend data
+    // Get 7-day trend data (berdasarkan tanggalJadiLeads)
     const trendData = [];
     for (let i = 6; i >= 0; i--) {
       const date = new Date(now);
@@ -160,26 +205,13 @@ export async function GET(request: NextRequest) {
       const startOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const endOfDay = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
 
-      const dayProspek = await prisma.prospek.count({
-        where: {
-          tanggalProspek: {
-            gte: startOfDay,
-            lt: endOfDay,
-          },
-        },
-      });
-
-      // Count leads: prospek yang pernah jadi leads (punya tanggalJadiLeads) ATAU status saat ini adalah Leads
+      // Jumlah leads yang tanggalJadiLeads pada hari tsb
       const dayLeads = await prisma.prospek.count({
         where: {
-          tanggalProspek: {
+          tanggalJadiLeads: {
             gte: startOfDay,
             lt: endOfDay,
           },
-          OR: [
-            { tanggalJadiLeads: { not: null } },
-            ...(leadsStatusId ? [{ statusLeadsId: leadsStatusId }] : [])
-          ]
         },
       });
 
@@ -196,7 +228,6 @@ export async function GET(request: NextRequest) {
       const dayNames = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
       trendData.push({
         day: dayNames[date.getDay()],
-        prospek: dayProspek,
         leads: dayLeads,
         customer: dayCustomers,
       });
@@ -205,7 +236,7 @@ export async function GET(request: NextRequest) {
     // Get top services (layanan)
     const prospekWithLayanan = leadsStatusId ? await prisma.prospek.findMany({
       where: {
-        ...dateFilter,
+        ...leadsFilter,
         statusLeadsId: leadsStatusId,
         layananAssistId: {
           not: null,
