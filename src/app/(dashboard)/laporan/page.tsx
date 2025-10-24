@@ -44,6 +44,7 @@ import { useKodeAdsLaporan } from '@/hooks/useKodeAdsLaporan'
 import { useLayananLaporan } from '@/hooks/useLayananLaporan'
 import { useTipeFaskesLaporan } from '@/hooks/useTipeFaskesLaporan'
 import { useKotaLaporan } from '@/hooks/useKotaLaporan'
+import { useCsPerformance } from '@/hooks/useCsPerformance'
 import { DynamicPieChart } from '@/components/DynamicPieChart'
 
 export default function LaporanPage() {
@@ -89,6 +90,13 @@ export default function LaporanPage() {
 
   // Fetch Kota data from database
   const { data: kotaLaporanData, isLoading: kotaLoading, error: kotaError, refetch: refetchKota } = useKotaLaporan(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
+  // Fetch CS Performance data from database
+  const { data: csPerformanceData, isLoading: csLoading, error: csError, refetch: refetchCs } = useCsPerformance(
     dateRange,
     customStartDate,
     customEndDate
@@ -314,6 +322,20 @@ export default function LaporanPage() {
     }))
   }, [kotaLaporanData])
 
+  // Process CS performance data from API with colors
+  const processedCsData = useMemo(() => {
+    const colorClasses = ['blue', 'green', 'orange', 'purple', 'indigo', 'emerald', 'pink', 'teal']
+    
+    if (!csPerformanceData?.data || csPerformanceData.data.length === 0) {
+      return []
+    }
+    
+    return csPerformanceData.data.map((item, index) => ({
+      ...item,
+      color: colorClasses[index % colorClasses.length]
+    }))
+  }, [csPerformanceData])
+
   // Fungsi untuk pagination Kota/Kabupaten
   const kotaTotalItems = kotaData.length
   const kotaItemsPerPageNum = parseInt(kotaItemsPerPage)
@@ -333,16 +355,7 @@ export default function LaporanPage() {
   }
 
   // Data untuk Performas CS
-  const csData = [
-    { name: 'Sarah Johnson', prospek: 318, leads: 89, ctr: 28.0, customer: 67, totalNilaiLangganan: 167500000, color: 'blue' },
-    { name: 'Michael Chen', prospek: 304, leads: 76, ctr: 25.0, customer: 58, totalNilaiLangganan: 145000000, color: 'green' },
-    { name: 'Lisa Wong', prospek: 291, leads: 64, ctr: 22.0, customer: 48, totalNilaiLangganan: 120000000, color: 'orange' },
-    { name: 'David Smith', prospek: 267, leads: 59, ctr: 22.1, customer: 45, totalNilaiLangganan: 112500000, color: 'purple' },
-    { name: 'Emma Wilson', prospek: 245, leads: 54, ctr: 22.0, customer: 41, totalNilaiLangganan: 102500000, color: 'indigo' },
-    { name: 'James Brown', prospek: 238, leads: 48, ctr: 20.2, customer: 36, totalNilaiLangganan: 90000000, color: 'emerald' },
-    { name: 'Anna Davis', prospek: 221, leads: 42, ctr: 19.0, customer: 32, totalNilaiLangganan: 80000000, color: 'pink' },
-    { name: 'Tom Garcia', prospek: 198, leads: 37, ctr: 18.7, customer: 28, totalNilaiLangganan: 70000000, color: 'teal' }
-  ]
+  const csData = processedCsData
 
   const [searchTerm, setSearchTerm] = useState('')
 
@@ -2547,7 +2560,22 @@ export default function LaporanPage() {
 
           {/* Performas CS Tab */}
           <TabsContent value="performas-cs">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {csLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                <span className="ml-3 text-slate-600">Memuat data Performas CS...</span>
+              </div>
+            ) : csError ? (
+              <div className="flex flex-col items-center justify-center h-64">
+                <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
+                <p className="text-slate-600 mb-4">Gagal memuat data Performas CS</p>
+                <Button onClick={() => refetchCs()} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Coba Lagi
+                </Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Tabel Performas CS */}
               <Card className="bg-white shadow-lg border-slate-200">
                 <CardHeader>
@@ -2749,6 +2777,7 @@ export default function LaporanPage() {
                 </CardContent>
               </Card>
             </div>
+          )}
           </TabsContent>
 
           {/* LTV & Retensi Tab */}
