@@ -10,6 +10,7 @@ declare module 'next-auth' {
       email: string
       name: string
       companyId: number
+      role?: string
     }
   }
 
@@ -18,6 +19,7 @@ declare module 'next-auth' {
     email: string
     name: string
     companyId: number
+    role?: string
     accessToken: string
     refreshToken: string
     accessTokenExpires: number
@@ -33,5 +35,6 @@ declare module 'next-auth/jwt' {
     companyId?: number
     email?: string
     name?: string
+    role?: string
   }
 }

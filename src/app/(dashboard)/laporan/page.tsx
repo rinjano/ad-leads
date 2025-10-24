@@ -46,6 +46,7 @@ import { useTipeFaskesLaporan } from '@/hooks/useTipeFaskesLaporan'
 import { useKotaLaporan } from '@/hooks/useKotaLaporan'
 import { useCsPerformance } from '@/hooks/useCsPerformance'
 import { DynamicPieChart } from '@/components/DynamicPieChart'
+import { useMonthlyAdsSpend } from '@/hooks/useMonthlyAdsSpend'
 
 export default function LaporanPage() {
   const [dateRange, setDateRange] = useState('thismonth')
@@ -102,6 +103,13 @@ export default function LaporanPage() {
     customEndDate
   )
 
+  // Fetch Monthly Ads Spend data from database
+  const { data: monthlyAdsSpendData, isLoading: monthlyAdsSpendLoading, error: monthlyAdsSpendError, refetch: refetchMonthlyAdsSpend } = useMonthlyAdsSpend(
+    dateRange,
+    customStartDate,
+    customEndDate
+  )
+
   // Handle date range change
   const handleDateRangeChange = (e) => {
     const value = e.target.value
@@ -141,6 +149,7 @@ export default function LaporanPage() {
   // State untuk Rekap Bulanan Ads Spend
   const [selectedAdsCode, setSelectedAdsCode] = useState('')
   const [selectedLeadSource, setSelectedLeadSource] = useState('')
+  const [selectedLayanan, setSelectedLayanan] = useState('')
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
 
   // Data dummy untuk ID Ads berdasarkan Kode Ads dengan Customer dan Total Nilai Langganan
@@ -359,698 +368,16 @@ export default function LaporanPage() {
 
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Data dummy untuk Rekap Bulanan Ads Spend dengan data multi-tahun (dengan Customer dan Total Nilai Langganan)
-  const monthlyAdsSpendData = [
-    // Data 2024
-    {
-      month: 'Januari',
-      year: 2024,
-      budgetSpent: 45000000,
-      prospek: 1200,
-      leads: 345,
-      costPerLead: 130434,
-      ctrLeads: 28.8,
-      customer: 245,
-      totalNilaiLangganan: 485000000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Februari',
-      year: 2024,
-      budgetSpent: 52000000,
-      prospek: 1450,
-      leads: 398,
-      costPerLead: 130653,
-      ctrLeads: 27.4,
-      customer: 285,
-      totalNilaiLangganan: 567000000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Maret',
-      year: 2024,
-      budgetSpent: 48500000,
-      prospek: 1380,
-      leads: 412,
-      costPerLead: 117718,
-      ctrLeads: 29.9,
-      customer: 295,
-      totalNilaiLangganan: 587500000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'April',
-      year: 2024,
-      budgetSpent: 55000000,
-      prospek: 1520,
-      leads: 425,
-      costPerLead: 129412,
-      ctrLeads: 27.9,
-      customer: 312,
-      totalNilaiLangganan: 625000000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Mei',
-      year: 2024,
-      budgetSpent: 49000000,
-      prospek: 1340,
-      leads: 389,
-      costPerLead: 125963,
-      ctrLeads: 29.0,
-      customer: 278,
-      totalNilaiLangganan: 556000000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Juni',
-      year: 2024,
-      budgetSpent: 58000000,
-      prospek: 1680,
-      leads: 465,
-      costPerLead: 124731,
-      ctrLeads: 27.7,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Juli',
-      year: 2024,
-      budgetSpent: 53000000,
-      prospek: 1580,
-      leads: 445,
-      costPerLead: 119101,
-      ctrLeads: 28.2,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Agustus',
-      year: 2024,
-      budgetSpent: 56000000,
-      prospek: 1650,
-      leads: 478,
-      costPerLead: 117154,
-      ctrLeads: 29.0,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'September',
-      year: 2024,
-      budgetSpent: 51000000,
-      prospek: 1520,
-      leads: 420,
-      costPerLead: 121429,
-      ctrLeads: 27.6,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Oktober',
-      year: 2024,
-      budgetSpent: 59000000,
-      prospek: 1720,
-      leads: 498,
-      costPerLead: 118474,
-      ctrLeads: 28.9,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    // Data 2025
-    {
-      month: 'Januari',
-      year: 2025,
-      budgetSpent: 62000000,
-      prospek: 1800,
-      leads: 520,
-      costPerLead: 119231,
-      ctrLeads: 28.9,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Februari',
-      year: 2025,
-      budgetSpent: 58000000,
-      prospek: 1750,
-      leads: 485,
-      costPerLead: 119588,
-      ctrLeads: 27.7,
-      customer: 350,
-      totalNilaiLangganan: 697500000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Maret',
-      year: 2025,
-      budgetSpent: 65000000,
-      prospek: 1900,
-      leads: 545,
-      costPerLead: 119266,
-      ctrLeads: 28.7,
-      customer: 395,
-      totalNilaiLangganan: 787500000,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'April',
-      year: 2025,
-      budgetSpent: 60000000,
-      prospek: 1780,
-      leads: 508,
-      costPerLead: 118110,
-      ctrLeads: 28.5,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Mei',
-      year: 2025,
-      budgetSpent: 63000000,
-      prospek: 1820,
-      leads: 525,
-      costPerLead: 120000,
-      ctrLeads: 28.8,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Juni',
-      year: 2025,
-      budgetSpent: 67000000,
-      prospek: 1950,
-      leads: 568,
-      costPerLead: 117958,
-      ctrLeads: 29.1,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Juli',
-      year: 2025,
-      budgetSpent: 64000000,
-      prospek: 1880,
-      leads: 535,
-      costPerLead: 119626,
-      ctrLeads: 28.5,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Agustus',
-      year: 2025,
-      budgetSpent: 66000000,
-      prospek: 1920,
-      leads: 558,
-      costPerLead: 118280,
-      ctrLeads: 29.1,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'September',
-      year: 2025,
-      budgetSpent: 61000000,
-      prospek: 1780,
-      leads: 512,
-      costPerLead: 119141,
-      ctrLeads: 28.8,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    {
-      month: 'Oktober',
-      year: 2025,
-      budgetSpent: 68000000,
-      prospek: 1980,
-      leads: 578,
-      costPerLead: 117648,
-      ctrLeads: 29.2,
-      kodeAds: 'FB001',
-      sumberLeads: 'Facebook Ads'
-    },
-    // Google Ads data 2024
-    {
-      month: 'Januari',
-      year: 2024,
-      budgetSpent: 38000000,
-      prospek: 980,
-      leads: 245,
-      costPerLead: 155102,
-      ctrLeads: 25.0,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Februari',
-      year: 2024,
-      budgetSpent: 42000000,
-      prospek: 1150,
-      leads: 278,
-      costPerLead: 151079,
-      ctrLeads: 24.2,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Maret',
-      year: 2024,
-      budgetSpent: 41000000,
-      prospek: 1080,
-      leads: 289,
-      costPerLead: 141868,
-      ctrLeads: 26.8,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'April',
-      year: 2024,
-      budgetSpent: 45000000,
-      prospek: 1200,
-      leads: 302,
-      costPerLead: 149007,
-      ctrLeads: 25.2,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Mei',
-      year: 2024,
-      budgetSpent: 39000000,
-      prospek: 1040,
-      leads: 267,
-      costPerLead: 146067,
-      ctrLeads: 25.7,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Juni',
-      year: 2024,
-      budgetSpent: 47000000,
-      prospek: 1290,
-      leads: 315,
-      costPerLead: 149206,
-      ctrLeads: 24.4,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Juli',
-      year: 2024,
-      budgetSpent: 43000000,
-      prospek: 1180,
-      leads: 285,
-      costPerLead: 150877,
-      ctrLeads: 24.2,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Agustus',
-      year: 2024,
-      budgetSpent: 46000000,
-      prospek: 1250,
-      leads: 308,
-      costPerLead: 149351,
-      ctrLeads: 24.6,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'September',
-      year: 2024,
-      budgetSpent: 44000000,
-      prospek: 1220,
-      leads: 295,
-      costPerLead: 149153,
-      ctrLeads: 24.2,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Oktober',
-      year: 2024,
-      budgetSpent: 48000000,
-      prospek: 1320,
-      leads: 325,
-      costPerLead: 147692,
-      ctrLeads: 24.6,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    // Google Ads data 2025
-    {
-      month: 'Januari',
-      year: 2025,
-      budgetSpent: 50000000,
-      prospek: 1380,
-      leads: 335,
-      costPerLead: 149254,
-      ctrLeads: 24.3,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Februari',
-      year: 2025,
-      budgetSpent: 47000000,
-      prospek: 1320,
-      leads: 318,
-      costPerLead: 147799,
-      ctrLeads: 24.1,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Maret',
-      year: 2025,
-      budgetSpent: 52000000,
-      prospek: 1450,
-      leads: 358,
-      costPerLead: 145251,
-      ctrLeads: 24.7,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'April',
-      year: 2025,
-      budgetSpent: 49000000,
-      prospek: 1380,
-      leads: 342,
-      costPerLead: 143275,
-      ctrLeads: 24.8,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Mei',
-      year: 2025,
-      budgetSpent: 51000000,
-      prospek: 1420,
-      leads: 348,
-      costPerLead: 146552,
-      ctrLeads: 24.5,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Juni',
-      year: 2025,
-      budgetSpent: 54000000,
-      prospek: 1500,
-      leads: 375,
-      costPerLead: 144000,
-      ctrLeads: 25.0,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Juli',
-      year: 2025,
-      budgetSpent: 52000000,
-      prospek: 1460,
-      leads: 362,
-      costPerLead: 143646,
-      ctrLeads: 24.8,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Agustus',
-      year: 2025,
-      budgetSpent: 55000000,
-      prospek: 1520,
-      leads: 385,
-      costPerLead: 142857,
-      ctrLeads: 25.3,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'September',
-      year: 2025,
-      budgetSpent: 53000000,
-      prospek: 1480,
-      leads: 368,
-      costPerLead: 144022,
-      ctrLeads: 24.9,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    {
-      month: 'Oktober',
-      year: 2025,
-      budgetSpent: 56000000,
-      prospek: 1550,
-      leads: 392,
-      costPerLead: 142857,
-      ctrLeads: 25.3,
-      kodeAds: 'GG002',
-      sumberLeads: 'Google Ads'
-    },
-    // Instagram Ads data 2024
-    {
-      month: 'Januari',
-      year: 2024,
-      budgetSpent: 28000000,
-      prospek: 750,
-      leads: 168,
-      costPerLead: 166667,
-      ctrLeads: 22.4,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Februari',
-      year: 2024,
-      budgetSpent: 32000000,
-      prospek: 890,
-      leads: 195,
-      costPerLead: 164103,
-      ctrLeads: 21.9,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Maret',
-      year: 2024,
-      budgetSpent: 31000000,
-      prospek: 820,
-      leads: 189,
-      costPerLead: 164021,
-      ctrLeads: 23.0,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'April',
-      year: 2024,
-      budgetSpent: 35000000,
-      prospek: 950,
-      leads: 208,
-      costPerLead: 168269,
-      ctrLeads: 21.9,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Mei',
-      year: 2024,
-      budgetSpent: 29000000,
-      prospek: 780,
-      leads: 178,
-      costPerLead: 162921,
-      ctrLeads: 22.8,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Juni',
-      year: 2024,
-      budgetSpent: 37000000,
-      prospek: 1020,
-      leads: 225,
-      costPerLead: 164444,
-      ctrLeads: 22.1,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Juli',
-      year: 2024,
-      budgetSpent: 33000000,
-      prospek: 880,
-      leads: 198,
-      costPerLead: 166667,
-      ctrLeads: 22.5,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Agustus',
-      year: 2024,
-      budgetSpent: 36000000,
-      prospek: 980,
-      leads: 218,
-      costPerLead: 165138,
-      ctrLeads: 22.2,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'September',
-      year: 2024,
-      budgetSpent: 34000000,
-      prospek: 920,
-      leads: 205,
-      costPerLead: 165854,
-      ctrLeads: 22.3,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Oktober',
-      year: 2024,
-      budgetSpent: 38000000,
-      prospek: 1050,
-      leads: 235,
-      costPerLead: 161702,
-      ctrLeads: 22.4,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    // Instagram Ads data 2025
-    {
-      month: 'Januari',
-      year: 2025,
-      budgetSpent: 40000000,
-      prospek: 1100,
-      leads: 248,
-      costPerLead: 161290,
-      ctrLeads: 22.5,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Februari',
-      year: 2025,
-      budgetSpent: 38000000,
-      prospek: 1050,
-      leads: 235,
-      costPerLead: 161702,
-      ctrLeads: 22.4,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Maret',
-      year: 2025,
-      budgetSpent: 42000000,
-      prospek: 1180,
-      leads: 268,
-      costPerLead: 156716,
-      ctrLeads: 22.7,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'April',
-      year: 2025,
-      budgetSpent: 39000000,
-      prospek: 1120,
-      leads: 252,
-      costPerLead: 154762,
-      ctrLeads: 22.5,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Mei',
-      year: 2025,
-      budgetSpent: 41000000,
-      prospek: 1150,
-      leads: 258,
-      costPerLead: 158915,
-      ctrLeads: 22.4,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Juni',
-      year: 2025,
-      budgetSpent: 43000000,
-      prospek: 1200,
-      leads: 275,
-      costPerLead: 156364,
-      ctrLeads: 22.9,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Juli',
-      year: 2025,
-      budgetSpent: 41000000,
-      prospek: 1160,
-      leads: 265,
-      costPerLead: 154717,
-      ctrLeads: 22.8,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Agustus',
-      year: 2025,
-      budgetSpent: 44000000,
-      prospek: 1220,
-      leads: 282,
-      costPerLead: 156028,
-      ctrLeads: 23.1,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'September',
-      year: 2025,
-      budgetSpent: 42000000,
-      prospek: 1180,
-      leads: 272,
-      costPerLead: 154412,
-      ctrLeads: 23.1,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    },
-    {
-      month: 'Oktober',
-      year: 2025,
-      budgetSpent: 45000000,
-      prospek: 1250,
-      leads: 290,
-      costPerLead: 155172,
-      ctrLeads: 23.2,
-      kodeAds: 'IG004',
-      sumberLeads: 'Instagram Ads'
-    }
-  ]
-
   // Fungsi untuk mendapatkan tahun-tahun yang tersedia di database
   const getAvailableYears = () => {
+    if (!monthlyAdsSpendData) return []
     const years = [...new Set(monthlyAdsSpendData.map(item => item.year))]
     return years.sort((a, b) => b - a) // Urutkan descending
   }
 
   // Fungsi untuk mendapatkan bulan-bulan yang ada data di tahun tertentu
   const getAvailableMonthsInYear = (year) => {
+    if (!monthlyAdsSpendData) return []
     const currentYear = new Date().getFullYear()
     const currentMonth = new Date().getMonth() + 1 // getMonth() returns 0-11, so add 1
 
@@ -1075,8 +402,9 @@ export default function LaporanPage() {
     return availableMonths
   }
 
-  // Fungsi untuk filter data berdasarkan Tahun, Kode Ads dan Sumber Leads
+  // Fungsi untuk filter data berdasarkan Tahun, Kode Ads, Sumber Leads dan Layanan
   const getFilteredMonthlyData = () => {
+    if (!monthlyAdsSpendData) return []
     let filtered = monthlyAdsSpendData
     
     // Filter by year
@@ -1088,6 +416,12 @@ export default function LaporanPage() {
     
     if (selectedLeadSource) {
       filtered = filtered.filter(item => item.sumberLeads === selectedLeadSource)
+    }
+
+    if (selectedLayanan) {
+      filtered = filtered.filter(item => 
+        item.layanan && item.layanan.split(', ').includes(selectedLayanan)
+      )
     }
     
     // Aggregate by month
@@ -1139,77 +473,136 @@ export default function LaporanPage() {
   }
 
   // Get unique values for filters
-  const uniqueAdsCodes = [...new Set(monthlyAdsSpendData.map(item => item.kodeAds))]
-  const uniqueLeadSources = [...new Set(monthlyAdsSpendData.map(item => item.sumberLeads))]
+  const uniqueAdsCodes = useMemo(() => {
+    if (!monthlyAdsSpendData) return []
+    return [...new Set(monthlyAdsSpendData.map(item => item.kodeAds).filter(code => code && code !== 'Unknown'))]
+  }, [monthlyAdsSpendData])
+
+  const uniqueLeadSources = useMemo(() => {
+    if (!monthlyAdsSpendData) return []
+    return [...new Set(monthlyAdsSpendData.map(item => item.sumberLeads).filter(source => source && source !== 'Unknown' && source.toLowerCase().includes('ads')))]
+  }, [monthlyAdsSpendData])
+
+  const uniqueLayanan = useMemo(() => {
+    if (!monthlyAdsSpendData) return []
+    const allLayanan = monthlyAdsSpendData.flatMap(item => 
+      item.layanan ? item.layanan.split(', ').filter(l => l.trim()) : []
+    )
+    return [...new Set(allLayanan)].filter(layanan => layanan && layanan !== 'Unknown')
+  }, [monthlyAdsSpendData])
 
   // Summary stats dari database atau default values
-  const summaryStats = summaryData?.data ? [
-    {
-      title: "Total Prospek",
-      value: summaryData.data.totalProspek.toLocaleString('id-ID'),
-      change: "+0%",
-      trend: "up",
-      icon: Users,
-      color: "blue"
-    },
-    {
-      title: "Total Leads",
-      value: summaryData.data.totalLeads.toLocaleString('id-ID'),
-      change: "+0%",
-      trend: "up",
-      icon: Target,
-      color: "green"
-    },
-    {
-      title: "CTR Leads",
-      value: `${summaryData.data.ctrLeads}%`,
-      change: "+0%",
-      trend: "up",
-      icon: TrendingUp,
-      color: "purple"
-    },
-    {
-      title: "Total Spam",
-      value: summaryData.data.totalSpam.toLocaleString('id-ID'),
-      change: "0%",
-      trend: "down",
-      icon: Activity,
-      color: "orange"
+  const summaryStats = (() => {
+    try {
+      if (summaryData?.data) {
+        return [
+          {
+            title: "Total Prospek",
+            value: (summaryData.data.totalProspek || 0).toLocaleString('id-ID'),
+            change: "+0%",
+            trend: "up",
+            icon: Users,
+            color: "blue"
+          },
+          {
+            title: "Total Leads",
+            value: (summaryData.data.totalLeads || 0).toLocaleString('id-ID'),
+            change: "+0%",
+            trend: "up",
+            icon: Target,
+            color: "green"
+          },
+          {
+            title: "CTR Leads",
+            value: `${(summaryData.data.ctrLeads || 0).toFixed(1)}%`,
+            change: "+0%",
+            trend: "up",
+            icon: TrendingUp,
+            color: "purple"
+          },
+          {
+            title: "Total Spam",
+            value: (summaryData.data.totalSpam || 0).toLocaleString('id-ID'),
+            change: "0%",
+            trend: "down",
+            icon: Activity,
+            color: "orange"
+          }
+        ]
+      }
+    } catch (error) {
+      console.error('Error creating summary stats:', error)
+      return [
+        {
+          title: "Total Prospek",
+          value: "0",
+          change: "+0%",
+          trend: "up",
+          icon: Users,
+          color: "blue"
+        },
+        {
+          title: "Total Leads",
+          value: "0",
+          change: "+0%",
+          trend: "up",
+          icon: Target,
+          color: "green"
+        },
+        {
+          title: "CTR Leads",
+          value: "0%",
+          change: "+0%",
+          trend: "up",
+          icon: TrendingUp,
+          color: "purple"
+        },
+        {
+          title: "Total Spam",
+          value: "0",
+          change: "0%",
+          trend: "down",
+          icon: Activity,
+          color: "orange"
+        }
+      ]
     }
-  ] : [
-    {
-      title: "Total Prospek",
-      value: "0",
-      change: "+0%",
-      trend: "up",
-      icon: Users,
-      color: "blue"
-    },
-    {
-      title: "Total Leads",
-      value: "0",
-      change: "+0%",
-      trend: "up",
-      icon: Target,
-      color: "green"
-    },
-    {
-      title: "CTR Leads",
-      value: "0%",
-      change: "+0%",
-      trend: "up",
-      icon: TrendingUp,
-      color: "purple"
-    },
-    {
-      title: "Total Spam",
-      value: "0",
-      change: "0%",
-      trend: "down",
-      icon: Activity,
-      color: "orange"
-    }
-  ]
+    
+    return [
+      {
+        title: "Total Prospek",
+        value: "0",
+        change: "+0%",
+        trend: "up",
+        icon: Users,
+        color: "blue"
+      },
+      {
+        title: "Total Leads",
+        value: "0",
+        change: "+0%",
+        trend: "up",
+        icon: Target,
+        color: "green"
+      },
+      {
+        title: "CTR Leads",
+        value: "0%",
+        change: "+0%",
+        trend: "up",
+        icon: TrendingUp,
+        color: "purple"
+      },
+      {
+        title: "Total Spam",
+        value: "0",
+        change: "0%",
+        trend: "down",
+        icon: Activity,
+        color: "orange"
+      }
+    ]
+  })()
 
   const recentReports = [
     {
@@ -3569,7 +2962,7 @@ export default function LaporanPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">
                         Tahun
@@ -3614,10 +3007,25 @@ export default function LaporanPage() {
                         ))}
                       </select>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Layanan
+                      </label>
+                      <select
+                        value={selectedLayanan}
+                        onChange={(e) => setSelectedLayanan(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
+                      >
+                        <option value="">Semua Layanan</option>
+                        {uniqueLayanan.map((layanan) => (
+                          <option key={layanan} value={layanan}>{layanan}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
                   <div className="mt-4 p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-600">
-                      <strong>Info:</strong> Data menampilkan rekap bulanan tahun {selectedYear} dari {selectedAdsCode || 'semua Kode Ads'} dan {selectedLeadSource || 'semua Sumber Leads'} secara gabungan per bulan.
+                      <strong>Info:</strong> Data menampilkan rekap bulanan tahun {selectedYear} dari {selectedAdsCode || 'semua Kode Ads'}, {selectedLeadSource || 'semua Sumber Leads'}, dan {selectedLayanan || 'semua Layanan'} secara gabungan per bulan.
                       {(() => {
                         const currentYear = new Date().getFullYear()
                         const currentMonth = new Date().getMonth() + 1
@@ -3654,8 +3062,8 @@ export default function LaporanPage() {
                       </div>
                     </div>
                     <div className="text-sm text-slate-500">
-                      {selectedAdsCode || selectedLeadSource ? 
-                        `Filter: ${selectedAdsCode ? selectedAdsCode : 'Semua'} - ${selectedLeadSource ? selectedLeadSource : 'Semua'}` :
+                      {selectedAdsCode || selectedLeadSource || selectedLayanan ? 
+                        `Filter: ${selectedAdsCode ? selectedAdsCode : 'Semua'} - ${selectedLeadSource ? selectedLeadSource : 'Semua'} - ${selectedLayanan ? selectedLayanan : 'Semua'}` :
                         'Menampilkan: Semua Data'
                       }
                     </div>

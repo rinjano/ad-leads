@@ -41,7 +41,36 @@ export const authOptions: NextAuthOptions = {
                         throw new Error('Please enter your email and password')
                     }
 
-                    // Find user by email using Prisma
+                    // Demo accounts for testing
+                    const demoAccounts = [
+                        { email: 'admin@demo.com', password: 'demo123', name: 'Super Admin', role: 'super_admin' },
+                        { email: 'representative@demo.com', password: 'demo123', name: 'CS Representative', role: 'cs_representative' },
+                        { email: 'advertiser@demo.com', password: 'demo123', name: 'Advertiser', role: 'advertiser' },
+                        { email: 'support@demo.com', password: 'demo123', name: 'CS Support', role: 'cs_support' },
+                        { email: 'retention@demo.com', password: 'demo123', name: 'Retention Specialist', role: 'retention' },
+                    ]
+
+                    // Check if it's a demo account
+                    const demoUser = demoAccounts.find(
+                        account => account.email === credentials.email && account.password === credentials.password
+                    )
+
+                    if (demoUser) {
+                        // Return demo user
+                        return {
+                            id: demoUser.email,
+                            name: demoUser.name,
+                            email: demoUser.email,
+                            role: demoUser.role,
+                            accessToken: 'demo-token-' + Date.now(),
+                            refreshToken: 'demo-refresh-' + Date.now(),
+                            accessTokenExpires: Date.now() + 6 * 60 * 60 * 1000, // 6 hours
+                            photo: undefined,
+                            companyId: 0,
+                        }
+                    }
+
+                    // If not a demo account, try database lookup
                     const user = await prisma.user.findUnique({
                         where: {
                             email: credentials.email,
@@ -103,6 +132,7 @@ export const authOptions: NextAuthOptions = {
                 token.companyId = user.companyId
                 token.name = user.name
                 token.email = user.email
+                token.role = user.role // Add role to token
             }
 
             if (trigger === 'update' && session) {
@@ -124,6 +154,7 @@ export const authOptions: NextAuthOptions = {
                 email: token.email as string,
                 name: token.name as string,
                 companyId: token.companyId as unknown as number,
+                role: token.role as string,
             }
 
             return session
