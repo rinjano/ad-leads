@@ -541,7 +541,7 @@ export default function AdsSpendPage() {
             Ads Spend
           </CardTitle>
           <CardDescription className="text-gray-600">
-            Kelola anggaran dan analisis performa iklan
+            Kelola budget dan analisis performa iklan
           </CardDescription>
         </CardHeader>
       </Card>
