@@ -4,7 +4,8 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { loginSchema, type LoginInput } from "@/lib/validations/auth"
 import { useRouter } from "next/navigation"
-import { signIn } from "next-auth/react"
+import { signIn, useSession } from "next-auth/react"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -62,6 +63,9 @@ const demoAccounts = [
 
 export default function LoginPage() {
   const router = useRouter()
+  const { data: session, status } = useSession()
+
+  // All hooks must be called before any conditional returns
   const {
     register,
     handleSubmit,
@@ -75,6 +79,25 @@ export default function LoginPage() {
       password: "",
     },
   })
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.push('/dashboard')
+    }
+  }, [status, session, router])
+
+  // Show loading while checking session
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    )
+  }
 
   const onSubmit = async (data: LoginInput) => {
     try {
