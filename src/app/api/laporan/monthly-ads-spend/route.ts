@@ -77,9 +77,14 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Get all prospects with related data
+    // Get all prospects with related data - only include ads-related prospects
     const prospects = await prisma.prospek.findMany({
-      where: dateFilter,
+      where: {
+        ...dateFilter,
+        kodeAdsId: {
+          not: null
+        }
+      },
       include: {
         konversi_customer: {
           include: {

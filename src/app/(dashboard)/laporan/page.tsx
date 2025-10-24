@@ -480,7 +480,7 @@ export default function LaporanPage() {
 
   const uniqueLeadSources = useMemo(() => {
     if (!monthlyAdsSpendData) return []
-    return [...new Set(monthlyAdsSpendData.map(item => item.sumberLeads).filter(source => source && source !== 'Unknown' && source.toLowerCase().includes('ads')))]
+    return [...new Set(monthlyAdsSpendData.map(item => item.sumberLeads).filter(source => source && source !== 'Unknown'))]
   }, [monthlyAdsSpendData])
 
   const uniqueLayanan = useMemo(() => {
