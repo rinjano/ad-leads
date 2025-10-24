@@ -259,7 +259,7 @@ export default function DashboardPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Dashboard Overview</h1>
-            <p className="text-slate-600 mt-1">Welcome back, {userName}! Here's your sales performance today.</p>
+            <p className="text-slate-600 mt-1">Welcome back, {userName}! Here&apos;s your sales performance today.</p>
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">

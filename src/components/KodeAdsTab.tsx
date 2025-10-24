@@ -35,7 +35,7 @@ export function KodeAdsTab() {
   const [customEndDate, setCustomEndDate] = useState('')
 
   // Fetch kode ads data dengan filter waktu
-  const { data: kodeAdsList = [], isLoading, refetch } = useKodeAds(dateRange, customStartDate, customEndDate)
+  const { data: kodeAdsList = [], isLoading, refetch } = useKodeAds()
   const createMutation = useCreateKodeAds()
   const updateMutation = useUpdateKodeAds()
   const deleteMutation = useDeleteKodeAds()

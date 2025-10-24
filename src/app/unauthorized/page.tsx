@@ -34,7 +34,7 @@ export default function UnauthorizedPage() {
           </div>
           <CardTitle className="text-2xl font-bold">Access Denied</CardTitle>
           <CardDescription className="text-red-100">
-            You don't have permission to access this resource
+            You don&apos;t have permission to access this resource
           </CardDescription>
         </CardHeader>
         
@@ -80,17 +80,17 @@ export default function UnauthorizedPage() {
             <div className="text-sm text-amber-700 space-y-2">
               {!appUser ? (
                 <>
-                  <p>Your account doesn't have a role assigned in the system.</p>
+                  <p>Your account doesn&apos;t have a role assigned in the system.</p>
                   <p>This usually means:</p>
                   <ul className="list-disc ml-4 space-y-1">
-                    <li>You're not registered in the user database</li>
-                    <li>Your account hasn't been activated by an administrator</li>
-                    <li>You're using an email that's not in the system</li>
+                    <li>You&apos;re not registered in the user database</li>
+                    <li>Your account hasn&apos;t been activated by an administrator</li>
+                    <li>You&apos;re using an email that&apos;s not in the system</li>
                   </ul>
                 </>
               ) : (
                 <>
-                  <p>Your current role doesn't have permission to access this page.</p>
+                  <p>Your current role doesn&apos;t have permission to access this page.</p>
                   <p>Contact your system administrator to request additional permissions.</p>
                 </>
               )}
@@ -101,7 +101,7 @@ export default function UnauthorizedPage() {
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-semibold text-blue-800 mb-2">Testing the System?</h4>
             <p className="text-sm text-blue-700 mb-3">
-              If you're testing, try logging in with one of these demo accounts:
+              If you&apos;re testing, try logging in with one of these demo accounts:
             </p>
             <div className="text-xs space-y-1 text-blue-600">
               <div>• <strong>admin@demo.com</strong> - Full system access</div>

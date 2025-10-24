@@ -31,6 +31,24 @@ export async function GET(request: NextRequest) {
         };
         break;
       }
+      case 'yesterday': {
+        const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        prospekFilter = {
+          tanggalProspek: {
+            gte: yesterday,
+            lt: today,
+          },
+        };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            not: null,
+            gte: yesterday,
+            lt: today,
+          },
+        };
+        break;
+      }
       case 'thismonth':
       case 'current-month': {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -47,7 +65,92 @@ export async function GET(request: NextRequest) {
         };
         break;
       }
-      // Tambahkan logika filter lainnya jika diperlukan
+      case 'this-week': {
+        // Calculate start of current week (Sunday)
+        const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - currentDay);
+        startOfWeek.setHours(0, 0, 0, 0); // Set to beginning of day
+        
+        prospekFilter = {
+          tanggalProspek: {
+            gte: startOfWeek,
+          },
+        };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            not: null,
+            gte: startOfWeek,
+          },
+        };
+        break;
+      }
+      case 'lastmonth':
+      case 'last-month': {
+        // Calculate last month date range
+        const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        prospekFilter = {
+          tanggalProspek: {
+            gte: lastMonth,
+            lt: thisMonth,
+          },
+        };
+        leadsFilter = {
+          tanggalJadiLeads: {
+            not: null,
+            gte: lastMonth,
+            lt: thisMonth,
+          },
+        };
+        break;
+      }
+      case 'year-month': {
+        // Handle specific year and month filter (used for "Bulan lalu")
+        if (year && month) {
+          const startOfMonth = new Date(parseInt(year), parseInt(month) - 1, 1); // Month is 0-based
+          const endOfMonth = new Date(parseInt(year), parseInt(month), 1); // Start of next month
+          
+          prospekFilter = {
+            tanggalProspek: {
+              gte: startOfMonth,
+              lt: endOfMonth,
+            },
+          };
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: startOfMonth,
+              lt: endOfMonth,
+            },
+          };
+        }
+        break;
+      }
+      case 'custom': {
+        // Handle custom date range filter
+        if (startDate && endDate) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+          // Set end date to end of day
+          end.setHours(23, 59, 59, 999);
+          
+          prospekFilter = {
+            tanggalProspek: {
+              gte: start,
+              lte: end,
+            },
+          };
+          leadsFilter = {
+            tanggalJadiLeads: {
+              not: null,
+              gte: start,
+              lte: end,
+            },
+          };
+        }
+        break;
+      }
     }
 
     // Get all leads with related data (filter by tanggalJadiLeads)

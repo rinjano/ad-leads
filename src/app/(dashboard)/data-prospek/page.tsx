@@ -1814,28 +1814,28 @@ value={filters.customEndDate}
                   {appliedFilters.kodeAds !== "all" && (
                     <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
                       <span className="text-slate-600 text-xs">Kode Ads:</span>
-                      <span className="font-bold text-blue-700 text-xs">"{appliedFilters.kodeAds}"</span>
+                      <span className="font-bold text-blue-700 text-xs">&quot;{appliedFilters.kodeAds}&quot;</span>
                     </span>
                   )}
                   
                   {appliedFilters.sumberLeads !== "all" && (
                     <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
                       <span className="text-slate-600 text-xs">Sumber:</span>
-                      <span className="font-bold text-blue-700 text-xs">"{appliedFilters.sumberLeads}"</span>
+                      <span className="font-bold text-blue-700 text-xs">&quot;{appliedFilters.sumberLeads}&quot;</span>
                     </span>
                   )}
 
                   {appliedFilters.layananAssist !== "all" && (
                     <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
                       <span className="text-slate-600 text-xs">Layanan:</span>
-                      <span className="font-bold text-blue-700 text-xs">"{appliedFilters.layananAssist}"</span>
+                      <span className="font-bold text-blue-700 text-xs">&quot;{appliedFilters.layananAssist}&quot;</span>
                     </span>
                   )}
                   
                   {appliedFilters.statusLeads !== "all" && (
                     <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
                       <span className="text-slate-600 text-xs">Status:</span>
-                      <span className="font-bold text-blue-700 text-xs">"{appliedFilters.statusLeads}"</span>
+                      <span className="font-bold text-blue-700 text-xs">&quot;{appliedFilters.statusLeads}&quot;</span>
                     </span>
                   )}
                   
@@ -1843,10 +1843,10 @@ value={filters.customEndDate}
                     <span className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-blue-200">
                       <span className="text-slate-600 text-xs">Periode:</span>
                       <span className="font-bold text-blue-700 text-xs">
-                        "{appliedFilters.periodeWaktu === "custom" 
+                        &quot;{appliedFilters.periodeWaktu === "custom" 
                           ? `${appliedFilters.customStartDate} - ${appliedFilters.customEndDate}`
                           : periodeWaktuOptions.find(p => p.value === appliedFilters.periodeWaktu)?.label
-                        }"
+                        }&quot;
                       </span>
                     </span>
                   )}
@@ -2673,7 +2673,7 @@ value={filters.customEndDate}
                 {prospectToConvert.leadStatus !== "Leads" && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
                     <p className="text-red-700 text-sm font-medium">
-                      ⚠️ Konversi hanya dapat dilakukan untuk prospek dengan status "Leads"
+                      ⚠️ Konversi hanya dapat dilakukan untuk prospek dengan status &quot;Leads&quot;
                     </p>
                   </div>
                 )}
@@ -2695,7 +2695,7 @@ value={filters.customEndDate}
                       </>
                     ) : (
                       <div className="ml-2 text-xs text-red-600 font-medium">
-                        (Harus status "Leads" untuk konversi)
+                        (Harus status &quot;Leads&quot; untuk konversi)
                       </div>
                     )}
                   </div>
@@ -2981,13 +2981,13 @@ value={filters.customEndDate}
                       <div>
                         <p className="text-sm font-medium text-slate-900 mb-1">Catatan Penting</p>
                         <ul className="text-sm text-slate-700 space-y-1">
-                          <li>• <strong>Konversi hanya dapat dilakukan untuk status "Leads"</strong></li>
+                          <li>• <strong>Konversi hanya dapat dilakukan untuk status &quot;Leads&quot;</strong></li>
                           <li>• Semua field dengan tanda (*) wajib diisi untuk setiap layanan/produk</li>
                           <li>• <strong>Nilai transaksi otomatis format rupiah</strong> (misal: 1000000 → Rp 1.000.000)</li>
                           <li>• Nilai minimum transaksi: Rp 1.000</li>
                           <li>• <strong>Dapat menambahkan multiple layanan dan produk</strong></li>
                           <li>• <strong>Kombinasi layanan-produk tidak boleh duplikat</strong></li>
-                          <li>• Setelah konversi, status akan berubah menjadi "Customer"</li>
+                          <li>• Setelah konversi, status akan berubah menjadi &quot;Customer&quot;</li>
                         </ul>
                       </div>
                     </div>
@@ -3000,7 +3000,7 @@ value={filters.customEndDate}
                       <div>
                         <p className="text-sm font-medium text-slate-900 mb-2">Yang Akan Terjadi Setelah Konversi:</p>
                         <ul className="text-sm text-slate-700 space-y-1">
-                          <li>• Status prospek otomatis berubah dari "{prospectToConvert.leadStatus}" → "Customer"</li>
+                          <li>• Status prospek otomatis berubah dari &quot;{prospectToConvert.leadStatus}&quot; → &quot;Customer&quot;</li>
                           <li>• Semua data layanan/produk dan transaksi tersimpan dalam sistem</li>
                           <li>• Data konversi dapat dilihat di laporan dan analytics</li>
                           <li>• Notifikasi sukses akan ditampilkan setelah proses selesai</li>

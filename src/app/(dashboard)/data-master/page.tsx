@@ -2022,7 +2022,7 @@ function FaskesTypeTab({ faskesTypes }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [faskesTypeToEdit, setFaskesTypeToEdit] = useState(null);
   const [editForm, setEditForm] = useState({ name: "" });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Faskes types data state
   const [faskesTypesList, setFaskesTypesList] = useState(faskesTypes);
@@ -2110,7 +2110,7 @@ function FaskesTypeTab({ faskesTypes }) {
   };
 
   const validateEditForm = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!editForm.name.trim()) {
       newErrors.name = "Nama tipe faskes wajib diisi";
     }
@@ -2619,7 +2619,7 @@ function LeadStatusTab({ leadStatus }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [statusToEdit, setStatusToEdit] = useState(null);
   const [editForm, setEditForm] = useState({ name: "" });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Status data state
   const [statusList, setStatusList] = useState(leadStatus);
@@ -2707,7 +2707,7 @@ function LeadStatusTab({ leadStatus }) {
   };
 
   const validateEditForm = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!editForm.name.trim()) {
       newErrors.name = "Nama status leads wajib diisi";
     }
@@ -3210,7 +3210,7 @@ function NotLeadsTab({ notLeads }) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [notLeadToEdit, setNotLeadToEdit] = useState(null);
   const [editForm, setEditForm] = useState({ name: "" });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Not leads data state
   const [notLeadsList, setNotLeadsList] = useState(notLeads);
@@ -3298,7 +3298,7 @@ function NotLeadsTab({ notLeads }) {
   };
 
   const validateEditForm = () => {
-    const newErrors = {};
+    const newErrors: Record<string, string> = {};
     if (!editForm.name.trim()) {
       newErrors.name = "Nama bukan leads wajib diisi";
     }
