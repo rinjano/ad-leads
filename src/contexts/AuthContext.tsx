@@ -51,7 +51,7 @@ export const rolePermissions = {
     }
   },
   advertiser: {
-    menus: ['dashboard', 'data_prospek', 'ads_spend'],
+    menus: ['dashboard', 'data_prospek', 'ads_spend', 'laporan'],
     actions: {
       prospects: ['read'],
       ads: ['read_assigned', 'manage_assigned_budget'],
