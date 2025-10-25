@@ -257,9 +257,12 @@ export async function PUT(request: NextRequest) {
         id: Date.now(),
         type: 'spend',
         amount: spentDifference,
+        totalSpent: newSpentAmount,
+        previousSpent: currentBudget.spent,
         note: `Spend update from ${currentBudget.spent} to ${newSpentAmount}`,
         createdBy: updatedBy || 'System',
         createdAt: new Date().toISOString(),
+        spendingTimestamp: body.spendingTimestamp || null,
       });
 
       await prisma.adsBudget.update({

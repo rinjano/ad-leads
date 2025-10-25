@@ -1635,6 +1635,31 @@ export default function AdsSpendPage() {
                                 <div className="text-xs text-slate-600 mb-1">
                                   Total Spending: <span className="font-semibold text-red-600">{formatCurrency(history.totalSpent || selectedAds.budgetSpent)}</span>
                                 </div>
+                                {/* Spending change info */}
+                                {(() => {
+                                  // Handle both old and new history formats
+                                  let previousValue = null;
+                                  let newValue = null;
+
+                                  if (history.previousSpent !== undefined && history.totalSpent !== undefined) {
+                                    // New format with explicit previousSpent and totalSpent
+                                    previousValue = history.previousSpent;
+                                    newValue = history.totalSpent;
+                                  } else {
+                                    // Old format - parse from note or calculate from amount
+                                    const noteMatch = history.note?.match(/Spend update from (\d+(?:\.\d+)?) to (\d+(?:\.\d+)?)/);
+                                    if (noteMatch) {
+                                      previousValue = parseFloat(noteMatch[1]);
+                                      newValue = parseFloat(noteMatch[2]);
+                                    }
+                                  }
+
+                                  return previousValue !== null && newValue !== null ? (
+                                    <div className="text-xs text-slate-600 mb-1">
+                                      Spend update from <span className="font-medium text-slate-700">{formatCurrency(previousValue)}</span> to <span className="font-medium text-red-600">{formatCurrency(newValue)}</span>
+                                    </div>
+                                  ) : null;
+                                })()}
                                 {/* Spending timestamp if available */}
                                 {history.spendingTimestamp && (
                                   <div className="text-xs text-slate-600">
