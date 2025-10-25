@@ -14,7 +14,7 @@ import { MultiSelectDropdown } from '@/components/MultiSelectDropdown';
 
 export default function TambahProspekPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { appUser } = useAuth();
   
   // Set default date to current date in UTC+7
   const getCurrentDateUTC7 = () => {
@@ -25,9 +25,8 @@ export default function TambahProspekPage() {
 
   // Get user name for PIC Leads
   const getUserName = () => {
-    if (!user) return '';
-    const userEmail = user.email || 'user@example.com';
-    return user.user_metadata?.full_name || userEmail.split('@')[0];
+    if (!appUser) return '';
+    return appUser.name || appUser.email.split('@')[0];
   };
 
   const [formData, setFormData] = useState({
@@ -321,13 +320,13 @@ export default function TambahProspekPage() {
 
   // Auto-fill PIC Leads with logged-in user name
   useEffect(() => {
-    if (user) {
+    if (appUser) {
       setFormData(prev => ({
         ...prev,
         picLeads: getUserName()
       }));
     }
-  }, [user]);
+  }, [appUser]);
 
   // Validation function
   const validateForm = () => {
