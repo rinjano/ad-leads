@@ -1625,13 +1625,34 @@ export default function AdsSpendPage() {
                         selectedAds.spentHistory.map((history, index) => (
                         <div key={index} className="bg-white p-4 rounded-lg shadow-sm border border-red-100 hover:shadow-md transition-shadow">
                           <div className="space-y-3">
-                            {/* Main content */}
+                            {/* Header with spending details */}
                             <div className="flex items-start justify-between">
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-slate-900 text-sm break-words">{history.note}</div>
+                                <div className="font-medium text-slate-900 text-sm mb-2 break-words">
+                                  {history.note || 'Update spending iklan'}
+                                </div>
+                                {/* Total spending info */}
+                                <div className="text-xs text-slate-600 mb-1">
+                                  Total Spending: <span className="font-semibold text-red-600">{formatCurrency(history.totalSpent || selectedAds.budgetSpent)}</span>
+                                </div>
+                                {/* Spending timestamp if available */}
+                                {history.spendingTimestamp && (
+                                  <div className="text-xs text-slate-600">
+                                    Waktu Spending: <span className="font-medium text-blue-600">
+                                      {new Date(history.spendingTimestamp).toLocaleDateString("id-ID", {
+                                        day: "2-digit",
+                                        month: "long", 
+                                        year: "numeric"
+                                      })}
+                                    </span>
+                                  </div>
+                                )}
                               </div>
                               <div className="text-right ml-4 flex-shrink-0">
-                                <div className="font-bold text-lg text-red-600">-{formatCurrency(history.amount)}</div>
+                                <div className="text-xs text-slate-500 mb-1">Spending Ditambah</div>
+                                <div className="font-bold text-lg text-red-600 bg-red-50 px-3 py-1 rounded">
+                                  +{formatCurrency(history.amount)}
+                                </div>
                               </div>
                             </div>
                             
@@ -1640,7 +1661,7 @@ export default function AdsSpendPage() {
                               <div className="flex items-center gap-1">
                                 <Calendar className="h-3 w-3 flex-shrink-0" />
                                 <span className="break-all">
-                                  {new Date(history.createdAt).toLocaleDateString("id-ID", {
+                                  Update: {new Date(history.createdAt).toLocaleDateString("id-ID", {
                                     day: "2-digit",
                                     month: "short", 
                                     year: "numeric"
