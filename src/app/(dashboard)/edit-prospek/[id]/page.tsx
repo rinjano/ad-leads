@@ -545,14 +545,13 @@ export default function EditProspekPage() {
       namaFaskes: "Nama Faskes",
       tipeFaskes: "Tipe Faskes",
       provinsi: "Provinsi",
-      kota: "Kota/Kabupaten",
-      picLeads: "PIC Leads"
+      kota: "Kota/Kabupaten"
     };
 
     // Basic required fields (email, layananAssist, namaFaskes, tipeFaskes, provinsi, kota sekarang optional)
     const basicRequiredFields = [
       'tanggalProspek', 'sumberLeads', 'namaProspek', 'noWhatsApp',
-      'statusLeads', 'picLeads'
+      'statusLeads'
     ];
 
     // Check basic required fields
@@ -1033,15 +1032,17 @@ export default function EditProspekPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  PIC Leads *
+                  PIC Leads
                 </label>
                 <input
                   type="text"
                   value={formData.picLeads}
-                  onChange={(e) => handleFormDataChange('picLeads', e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  required
+                  readOnly
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 text-gray-600 cursor-not-allowed"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Field ini tidak dapat diubah untuk menjaga integritas data
+                </p>
               </div>
             </div>
           </div>

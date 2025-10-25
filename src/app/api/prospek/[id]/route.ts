@@ -79,7 +79,7 @@ export async function PUT(
     } = body;
 
     // Validation - layananAssist, namaFaskes, tipeFaskes, provinsi, kota sekarang optional
-    if (!tanggalProspek || !sumberLeads || !namaProspek || !noWhatsApp || !statusLeads || !picLeads) {
+    if (!tanggalProspek || !sumberLeads || !namaProspek || !noWhatsApp || !statusLeads) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
