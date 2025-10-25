@@ -91,6 +91,7 @@ export default function AdsSpendPage() {
   const [includePPN, setIncludePPN] = useState(false);
   const [currentDate, setCurrentDate] = useState("");
   const [budgetTimestamp, setBudgetTimestamp] = useState("");
+  const [spendingTimestamp, setSpendingTimestamp] = useState("");
 
   // Set current date on client side only
   useEffect(() => {
@@ -400,6 +401,8 @@ export default function AdsSpendPage() {
     setSelectedAds(ads);
     setNewBudgetSpent(ads.totalAdsSpent?.toString() || '0');
     setIncludePPN(false);
+    const now = new Date();
+    setSpendingTimestamp(now.toISOString().split('T')[0]);
     setShowUpdateBudgetSpentModal(true);
   };
 
@@ -433,6 +436,7 @@ export default function AdsSpendPage() {
         ? {
             id: selectedAds.budgetId,
             spent: totalSpent,  // Kirim total spending baru (bukan tambahan)
+            spendingTimestamp, // Kirim waktu spending
             updatedBy: 'Admin', // TODO: Get from session
           }
         : {
@@ -440,6 +444,7 @@ export default function AdsSpendPage() {
             sumberLeadsId: selectedAds.sumberLeadsId,
             budget: parseFloat(selectedAds.budget) || 0,
             spent: totalSpent,  // Kirim total spending baru (bukan tambahan)
+            spendingTimestamp, // Kirim waktu spending
             periode,
             createdBy: 'Admin', // TODO: Get from session
           };
@@ -460,6 +465,7 @@ export default function AdsSpendPage() {
         setShowUpdateBudgetSpentModal(false);
         setNewBudgetSpent("");
         setIncludePPN(false);
+        setSpendingTimestamp("");
         setSelectedAds(null);
         // Refresh data
         refetch();
@@ -1382,6 +1388,22 @@ export default function AdsSpendPage() {
                 </p>
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Waktu Spending <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={spendingTimestamp}
+                  onChange={(e) => setSpendingTimestamp(e.target.value)}
+                  className="w-full"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Pilih tanggal kapan spending iklan ini dilakukan
+                </p>
+              </div>
+              
               <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                 <input
                   type="checkbox"
@@ -1437,6 +1459,7 @@ export default function AdsSpendPage() {
                   setShowUpdateBudgetSpentModal(false);
                   setNewBudgetSpent("");
                   setIncludePPN(false);
+                  setSpendingTimestamp("");
                   setSelectedAds(null);
                 }}
                 className="px-6 py-2 border-slate-300 text-slate-700 hover:bg-slate-50"
