@@ -407,24 +407,18 @@ export default function AdsSpendPage() {
     if (!newBudgetSpent || !selectedAds) return;
 
     try {
-      // Hitung total spending baru (spending lama + spending baru yang ditambahkan)
-      // Pastikan convert ke number untuk menghindari string concatenation
-      const currentSpent = parseFloat(selectedAds.budgetSpent) || 0;
-      const additionalSpent = parseFloat(newBudgetSpent) || 0;
+      // Gunakan nilai inputan sebagai total spending baru (bukan ditambahkan dengan spending lama)
+      const newTotalSpent = parseFloat(newBudgetSpent) || 0;
       
-      // Calculate dengan PPN jika diperlukan (PPN hanya untuk tambahan, bukan total)
-      const additionalWithPPN = includePPN ? additionalSpent + (additionalSpent * 0.11) : additionalSpent;
-      const totalSpent = currentSpent + additionalWithPPN;
+      // Calculate dengan PPN jika diperlukan
+      const totalSpent = includePPN ? newTotalSpent + (newTotalSpent * 0.11) : newTotalSpent;
 
       console.log('Debug Update Spending:', {
-        currentSpent,
-        additionalSpent,
-        additionalWithPPN,
+        newTotalSpent,
         totalSpent,
         includePPN,
         selectedAds_budgetSpent: selectedAds.budgetSpent,
-        typeof_currentSpent: typeof currentSpent,
-        typeof_additionalSpent: typeof additionalSpent
+        typeof_newTotalSpent: typeof newTotalSpent
       });
 
       // If budgetId exists, update. Otherwise create new budget entry
@@ -438,14 +432,14 @@ export default function AdsSpendPage() {
       const body = selectedAds.budgetId
         ? {
             id: selectedAds.budgetId,
-            spent: totalSpent,  // Kirim total spending (lama + baru)
+            spent: totalSpent,  // Kirim total spending baru (bukan tambahan)
             updatedBy: 'Admin', // TODO: Get from session
           }
         : {
             kodeAdsId: selectedAds.kodeAdsId,
             sumberLeadsId: selectedAds.sumberLeadsId,
             budget: parseFloat(selectedAds.budget) || 0,
-            spent: totalSpent,  // Kirim total spending (lama + baru)
+            spent: totalSpent,  // Kirim total spending baru (bukan tambahan)
             periode,
             createdBy: 'Admin', // TODO: Get from session
           };
@@ -462,7 +456,7 @@ export default function AdsSpendPage() {
 
       if (data.success) {
         const ppnInfo = includePPN ? ' (termasuk PPN 11%)' : '';
-        alert(`Spending berhasil ditambahkan${ppnInfo}! Total spending sekarang: Rp ${totalSpent.toLocaleString('id-ID')}`);
+        alert(`Spending berhasil diupdate${ppnInfo}! Total spending sekarang: Rp ${totalSpent.toLocaleString('id-ID')}`);
         setShowUpdateBudgetSpentModal(false);
         setNewBudgetSpent("");
         setIncludePPN(false);
@@ -1367,14 +1361,14 @@ export default function AdsSpendPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white shadow-lg w-full max-w-md border-slate-200 rounded-2xl">
             <div className="bg-gradient-to-r from-red-50 to-rose-50 border-b border-slate-200 p-6">
-              <h3 className="text-xl font-bold text-slate-900 mb-1">Tambah Spending</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-1">Update Spending</h3>
               <p className="text-sm text-slate-600">Kode Ads: {selectedAds.kodeAds}</p>
             </div>
             
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Spending Tambahan <span className="text-red-500">*</span>
+                  Total Spending <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
@@ -1383,6 +1377,9 @@ export default function AdsSpendPage() {
                   placeholder="Rp 0"
                   className="w-full"
                 />
+                <p className="text-xs text-slate-500 mt-1">
+                  Masukkan total spending terbaru (bukan tambahan)
+                </p>
               </div>
               
               <div className="flex items-center gap-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
@@ -1408,7 +1405,7 @@ export default function AdsSpendPage() {
                     <span className="font-medium">{formatCurrency(parseFloat(selectedAds.budgetSpent) || 0)}</span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-slate-600">Spending Tambahan:</span>
+                    <span className="text-slate-600">Total Spending Baru:</span>
                     <span className="font-medium text-green-600">
                       {newBudgetSpent ? formatCurrency(parseFloat(newBudgetSpent)) : formatCurrency(0)}
                     </span>
@@ -1421,18 +1418,14 @@ export default function AdsSpendPage() {
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between border-t pt-2">
-                    <span className="text-slate-600 font-medium">Total Spending Baru:</span>
-                    <span className="font-bold text-red-600">
-                      {(() => {
-                        const currentSpent = parseFloat(selectedAds.budgetSpent) || 0;
-                        const additionalSpent = parseFloat(newBudgetSpent) || 0;
-                        const additionalWithPPN = includePPN ? additionalSpent + (additionalSpent * 0.11) : additionalSpent;
-                        const totalSpent = currentSpent + additionalWithPPN;
-                        return formatCurrency(totalSpent);
-                      })()}
-                    </span>
-                  </div>
+                  {includePPN && newBudgetSpent && (
+                    <div className="flex justify-between border-t pt-2">
+                      <span className="text-slate-600 font-medium">Total dengan PPN:</span>
+                      <span className="font-bold text-red-600">
+                        {formatCurrency(parseFloat(newBudgetSpent) + (parseFloat(newBudgetSpent) * 0.11))}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1455,7 +1448,7 @@ export default function AdsSpendPage() {
                 disabled={!newBudgetSpent}
                 className="px-6 py-2 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white"
               >
-                Tambah Spending
+                Update Spending
               </Button>
             </div>
           </div>
