@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     // Build base filter for role-based access
     let baseFilter: any = {}
     if (session.user.role === 'cs_support') {
-      baseFilter.createdBy = session.user.id
+      baseFilter.picLeads = session.user.name
     } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
       baseFilter.kodeAdsId = { in: session.user.kodeAds }
     }

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     // Apply role-based filtering
     if (session.user.role === 'cs_support') {
       // CS Support can only see their own prospects
-      baseFilter.createdBy = session.user.email
+      baseFilter.createdBy = session.user.name
     } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
       // Advertiser can only see prospects from their assigned kode ads
       baseFilter.kodeAds = {

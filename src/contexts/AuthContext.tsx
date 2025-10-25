@@ -37,9 +37,9 @@ export const rolePermissions = {
     }
   },
   cs_support: {
-    menus: ['dashboard'],
+    menus: ['dashboard', 'data_prospek', 'laporan'],
     actions: {
-      prospects: ['read_own', 'update_own'],
+      prospects: ['read_own', 'update_own', 'create'],
       reports: ['view_basic']
     }
   },
