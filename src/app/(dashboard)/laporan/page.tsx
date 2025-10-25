@@ -729,7 +729,11 @@ export default function LaporanPage() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="sumber-leads" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-3 lg:grid-cols-8 bg-slate-50 border-b-2 border-slate-200 p-0 rounded-none shadow-sm">
+          <TabsList className={`grid w-full bg-slate-50 border-b-2 border-slate-200 p-0 rounded-none shadow-sm ${
+            appUser?.role === 'cs_support' 
+              ? 'grid-cols-2 md:grid-cols-4' 
+              : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-8'
+          }`}>
             <TabsTrigger 
               value="sumber-leads"
               className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
@@ -752,40 +756,44 @@ export default function LaporanPage() {
               <span className="hidden md:inline">Layanan</span>
             </TabsTrigger>
             <TabsTrigger 
-              value="tipe-faskes"
-              className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
-            >
-              <Users className="h-4 w-4" />
-              <span className="hidden md:inline">Tipe Faskes</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="kota-kabupaten"
-              className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
-            >
-              <Calendar className="h-4 w-4" />
-              <span className="hidden md:inline">Kota/Kabupaten</span>
-            </TabsTrigger>
-            <TabsTrigger 
               value="performas-cs"
               className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
             >
               <TrendingUp className="h-4 w-4" />
               <span className="hidden md:inline">Performas CS</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="ltv-retensi"
-              className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
-            >
-              <LineChart className="h-4 w-4" />
-              <span className="hidden md:inline">LTV & Retensi</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="rekap-bulanan-ads"
-              className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
-            >
-              <DollarSign className="h-4 w-4" />
-              <span className="hidden md:inline">Rekap Bulanan Ads Spend</span>
-            </TabsTrigger>
+            {appUser?.role !== 'cs_support' && (
+              <>
+                <TabsTrigger 
+                  value="tipe-faskes"
+                  className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
+                >
+                  <Users className="h-4 w-4" />
+                  <span className="hidden md:inline">Tipe Faskes</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="kota-kabupaten"
+                  className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span className="hidden md:inline">Kota/Kabupaten</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="ltv-retensi"
+                  className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
+                >
+                  <LineChart className="h-4 w-4" />
+                  <span className="hidden md:inline">LTV & Retensi</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="rekap-bulanan-ads"
+                  className="flex items-center justify-center gap-2 py-4 px-4 font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-600 data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:font-bold transition-all duration-200 border-b-2 border-transparent"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  <span className="hidden md:inline">Rekap Bulanan Ads Spend</span>
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           {/* Sumber Leads Tab */}
@@ -1495,6 +1503,7 @@ export default function LaporanPage() {
           </TabsContent>
 
           {/* Tipe Faskes Tab */}
+          {appUser?.role !== 'cs_support' && (
           <TabsContent value="tipe-faskes">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Tabel Laporan Tipe Faskes */}
@@ -1669,8 +1678,10 @@ export default function LaporanPage() {
               </Card>
             </div>
           </TabsContent>
+          )}
 
           {/* Kota/Kabupaten Tab */}
+          {appUser?.role !== 'cs_support' && (
           <TabsContent value="kota-kabupaten">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Tabel Laporan Kota/Kabupaten */}
@@ -1904,6 +1915,7 @@ export default function LaporanPage() {
               </Card>
             </div>
           </TabsContent>
+          )}
 
           {/* Performas CS Tab */}
           <TabsContent value="performas-cs">
@@ -2161,6 +2173,7 @@ export default function LaporanPage() {
           </TabsContent>
 
           {/* LTV & Retensi Tab */}
+          {appUser?.role !== 'cs_support' && (
           <TabsContent value="ltv-retensi">
             <div className="space-y-6">
               {/* LTV & Retensi Insights Overview */}
@@ -2936,8 +2949,10 @@ export default function LaporanPage() {
               </div>
             </div>
           </TabsContent>
+          )}
 
           {/* Rekap Bulanan Ads Spend Tab */}
+          {appUser?.role !== 'cs_support' && (
           <TabsContent value="rekap-bulanan-ads">
             <div className="space-y-6">
               {/* Filter Section */}
@@ -3372,6 +3387,7 @@ export default function LaporanPage() {
               </div>
             </div>
           </TabsContent>
+          )}
         </Tabs>
         </>
       )}
