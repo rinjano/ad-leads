@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
+// Helper function to get timestamp for history
+const getHistoryTimestamp = (budgetTimestamp?: string) => {
+  if (budgetTimestamp) {
+    // Convert the date string (YYYY-MM-DD) to ISO string
+    return new Date(budgetTimestamp).toISOString();
+  }
+  return new Date().toISOString();
+};
+
 // GET - Get all budgets or specific budget
 export async function GET(request: NextRequest) {
   try {
@@ -46,7 +55,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { kodeAdsId, sumberLeadsId, budget, spent, periode, createdBy } = body;
+    const { kodeAdsId, sumberLeadsId, budget, spent, periode, createdBy, budgetTimestamp } = body;
 
     if (!kodeAdsId || !sumberLeadsId || !periode) {
       return NextResponse.json(
@@ -98,7 +107,7 @@ export async function POST(request: NextRequest) {
           amount: budgetDifference,
           note: `Budget adjustment from ${existing.budget} to ${newBudgetAmount}`,
           createdBy: createdBy || 'System',
-          createdAt: new Date().toISOString(),
+          createdAt: getHistoryTimestamp(budgetTimestamp),
         });
         
         await prisma.adsBudget.update({
@@ -118,7 +127,7 @@ export async function POST(request: NextRequest) {
           amount: spentDifference,
           note: `Spend adjustment from ${existing.spent} to ${newSpentAmount}`,
           createdBy: createdBy || 'System',
-          createdAt: new Date().toISOString(),
+          createdAt: getHistoryTimestamp(budgetTimestamp),
         });
         
         await prisma.adsBudget.update({
@@ -155,7 +164,7 @@ export async function POST(request: NextRequest) {
           amount: newBudgetAmount,
           note: `Initial budget created`,
           createdBy: createdBy || 'System',
-          createdAt: new Date().toISOString(),
+          createdAt: getHistoryTimestamp(budgetTimestamp),
         }];
         
         await prisma.adsBudget.update({
@@ -171,7 +180,7 @@ export async function POST(request: NextRequest) {
           amount: newSpentAmount,
           note: `Initial spend recorded`,
           createdBy: createdBy || 'System',
-          createdAt: new Date().toISOString(),
+          createdAt: getHistoryTimestamp(budgetTimestamp),
         }];
         
         await prisma.adsBudget.update({

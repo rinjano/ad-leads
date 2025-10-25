@@ -90,11 +90,20 @@ export default function AdsSpendPage() {
   const [newBudgetSpent, setNewBudgetSpent] = useState("");
   const [includePPN, setIncludePPN] = useState(false);
   const [currentDate, setCurrentDate] = useState("");
+  const [budgetTimestamp, setBudgetTimestamp] = useState("");
 
   // Set current date on client side only
   useEffect(() => {
     setCurrentDate(new Date().toLocaleDateString("id-ID"));
   }, []);
+
+  // Initialize budget timestamp when modal opens
+  useEffect(() => {
+    if (showAddBudgetModal) {
+      const now = new Date();
+      setBudgetTimestamp(now.toISOString().split('T')[0]);
+    }
+  }, [showAddBudgetModal]);
 
   // Fetch layanan data from API
   useEffect(() => {
@@ -356,6 +365,7 @@ export default function AdsSpendPage() {
           spent: selectedAds.totalAdsSpend || 0,
           periode,
           createdBy: 'Admin', // TODO: Get from session
+          budgetTimestamp: budgetTimestamp, // Send custom timestamp
         }),
       });
 
@@ -366,6 +376,7 @@ export default function AdsSpendPage() {
         setShowAddBudgetModal(false);
         setNewBudgetAmount("");
         setNewBudgetNote("");
+        setBudgetTimestamp("");
         setSelectedAds(null);
         // Refresh data
         refetch();
@@ -1287,6 +1298,22 @@ export default function AdsSpendPage() {
                 />
               </div>
               
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Waktu Penambahan Budget <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="date"
+                  value={budgetTimestamp}
+                  onChange={(e) => setBudgetTimestamp(e.target.value)}
+                  className="w-full"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Pilih waktu kapan budget ini ditambahkan
+                </p>
+              </div>
+              
               <div className="bg-slate-50 rounded-lg p-4">
                 <div className="text-sm">
                   <div className="flex justify-between mb-2">
@@ -1316,6 +1343,7 @@ export default function AdsSpendPage() {
                   setShowAddBudgetModal(false);
                   setNewBudgetAmount("");
                   setNewBudgetNote("");
+                  setBudgetTimestamp("");
                   setSelectedAds(null);
                 }}
                 className="px-6 py-2 border-slate-300 text-slate-700 hover:bg-slate-50"
