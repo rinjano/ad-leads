@@ -20,91 +20,58 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    // Base filter for role-based access control (KONSISTEN)
+    // Base filter for role-based access control
     let baseFilter: any = {}
     if (session.user.role === 'cs_support') {
-      // CS Support hanya bisa lihat prospek yang dia pegang (picLeads)
       baseFilter.picLeads = session.user.name
     } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
-      // Advertiser hanya bisa lihat prospek dari kodeAds yang dia pegang
       baseFilter.kodeAdsId = {
         in: session.user.kodeAds
       }
     }
-    // Super admin, CS representative, retention: lihat semua data
 
-    // Gunakan utility filter yang konsisten
-    const now = new Date();
-    // Jangan pernah masukkan filter waktu ke baseFilter
-    const prospekFilter = {
-      ...baseFilter,
-      ...getLaporanDateFilter({ type: 'prospek', periode: filter, startDate, endDate, now })
-    };
-
-    // Get status leads ID for "Leads"
-    const statusLeads = await prisma.statusLeads.findFirst({
-      where: { nama: 'Leads' }
+    // Apply date filtering
+    const now = new Date()
+    const dateFilter = getLaporanDateFilter({ 
+      type: 'prospek', 
+      periode: filter, 
+      startDate, 
+      endDate, 
+      now 
     })
-    const leadsStatusId = statusLeads?.id
 
-    // Custom leads filter agar sama dengan dashboard
-    let leadsFilter: any = { ...baseFilter };
-    if (filter === 'custom' && startDate && endDate) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      leadsFilter = {
-        ...baseFilter,
-        OR: [
-          {
-            tanggalProspek: {
-              gte: start,
-              lte: end,
-            },
-            OR: [
-              { tanggalJadiLeads: { not: null } },
-              { statusLeadsId: leadsStatusId }
-            ]
-          },
-          {
-            tanggalJadiLeads: {
-              gte: start,
-              lte: end,
-            }
-          }
-        ]
-      };
-    } else {
-      leadsFilter = {
-        ...baseFilter,
-        ...getLaporanDateFilter({ type: 'leads', periode: filter, startDate, endDate, now })
-      };
-    }
-
-    // Get total prospek count (berdasarkan tanggalProspek)
+    // Get total prospek count
     const totalProspek = await prisma.prospek.count({
-      where: prospekFilter
+      where: {
+        ...baseFilter,
+        ...dateFilter
+      }
     })
-    // Get total leads count (menggunakan filter baru)
+    
+    // Get total leads count
     const totalLeads = await prisma.prospek.count({
-      where: leadsFilter
+      where: {
+        ...baseFilter,
+        tanggalJadiLeads: { not: null },
+        ...getLaporanDateFilter({ 
+          type: 'leads', 
+          periode: filter, 
+          startDate, 
+          endDate, 
+          now 
+        })
+      }
     })
 
-    // Calculate CTR Leads percentage
-    const ctrLeads = totalProspek > 0
-      ? parseFloat(((totalLeads / totalProspek) * 100).toFixed(1))
-      : 0
-
-    // Get bukan leads ID for "Spam"
+    // Get spam count
     const bukanLeadsSpam = await prisma.bukanLeads.findFirst({
       where: { nama: 'Spam' }
     })
-    const spamId = bukanLeadsSpam?.id
-
-    // Count spam (where bukanLeadsId matches "Spam")
-    const totalSpam = spamId ? await prisma.prospek.count({
+    const totalSpam = bukanLeadsSpam?.id ? await prisma.prospek.count({
       where: {
-        ...prospekFilter,
-        bukanLeadsId: spamId
+        ...baseFilter,
+        bukanLeadsId: bukanLeadsSpam.id,
+        ...dateFilter
       }
     }) : 0
 

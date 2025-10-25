@@ -84,7 +84,8 @@ export function getLaporanDateFilter({
         }
         case 'thismonth': {
           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-          filter.tanggalJadiLeads = { not: null, gte: startOfMonth };
+          const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          filter.tanggalJadiLeads = { not: null, gte: startOfMonth, lt: startOfNextMonth };
           break;
         }
         case 'lastmonth': {

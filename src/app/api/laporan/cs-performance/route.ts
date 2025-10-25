@@ -10,10 +10,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
-    const searchParams = request.nextUrl.searchParams
-    const filter = searchParams.get('filter') || 'thismonth'
-    const startDate = searchParams.get('startDate')
-    const endDate = searchParams.get('endDate')
+  const searchParams = request.nextUrl.searchParams
+  const filter = searchParams.get('filter') || 'thismonth'
+  const startDate = searchParams.get('startDate')
+  const endDate = searchParams.get('endDate')
+  const layananId = searchParams.get('layananId')
 
     // Build base filter for role-based access
     let baseFilter: any = {}
@@ -89,15 +90,39 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all prospects with their CS representatives and conversion data
+    // Jika filter layananId diisi, filter berdasarkan layanan yang diminati prospek
+    let layananFilter: any = {}
+    if (layananId && layananId !== 'null' && layananId !== '') {
+      // Get layanan name from ID
+      const layanan = await prisma.layanan.findUnique({
+        where: { id: parseInt(layananId) },
+        select: { nama: true }
+      })
+      
+      if (layanan) {
+        // Filter berdasarkan layananAssistId yang mengandung nama layanan
+        layananFilter = {
+          layananAssistId: {
+            contains: layanan.nama
+          }
+        }
+      }
+    }
     const prospects = await prisma.prospek.findMany({
       where: {
         ...dateFilter,
-        ...baseFilter
+        ...baseFilter,
+        ...layananFilter
       },
       include: {
         konversi_customer: {
           select: {
-            totalNilaiTransaksi: true
+            totalNilaiTransaksi: true,
+            konversi_customer_item: {
+              select: {
+                layananId: true
+              }
+            }
           }
         }
       }

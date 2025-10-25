@@ -43,12 +43,15 @@ import { useSumberLeadsLaporan } from '@/hooks/useSumberLeadsLaporan'
 import { useLaporanSummary } from '@/hooks/useLaporanSummary'
 import { useKodeAdsLaporan } from '@/hooks/useKodeAdsLaporan'
 import { useLayananLaporan } from '@/hooks/useLayananLaporan'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { useTipeFaskesLaporan } from '@/hooks/useTipeFaskesLaporan'
 import { useKotaLaporan } from '@/hooks/useKotaLaporan'
 import { useCsPerformance } from '@/hooks/useCsPerformance'
 import { DynamicPieChart } from '@/components/DynamicPieChart'
 import { useMonthlyAdsSpend } from '@/hooks/useMonthlyAdsSpend'
 import { useAuth } from '@/contexts/AuthContext'
+import { useLayananMaster } from '@/hooks/useLayananMaster'
+import { formatCurrency } from '@/lib/utils'
 
 export default function LaporanPage() {
   const { canAccessMenu, appUser, loading: authLoading } = useAuth()
@@ -58,8 +61,28 @@ export default function LaporanPage() {
 
   const [dateRange, setDateRange] = useState('thismonth')
   const [showCustomDate, setShowCustomDate] = useState(false)
+
+  // State untuk filter tahun rekap bulanan
+  const currentYear = new Date().getFullYear()
+  const [selectedYear, setSelectedYear] = useState(() => {
+    // Coba ambil tahun terbaru dari data, fallback ke tahun sekarang
+    // getAvailableYears belum bisa dipanggil di sini, jadi default currentYear
+    return currentYear
+  })
+
+  // State untuk filter kode ads, sumber leads, layanan
+  const [selectedAdsCode, setSelectedAdsCode] = useState("")
+  const [selectedLeadSource, setSelectedLeadSource] = useState("")
+  const [selectedLayanan, setSelectedLayanan] = useState("")
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
+
+  // Handle date range change
+  const handleDateRangeChange = (e) => {
+    const value = e.target.value
+    setDateRange(value)
+    setShowCustomDate(value === 'custom')
+  }
 
   // Fetch Summary data from database
   const { data: summaryData, isLoading: summaryLoading, error: summaryError, refetch: refetchSummary } = useLaporanSummary(
@@ -82,12 +105,20 @@ export default function LaporanPage() {
     customEndDate
   )
 
-  // Fetch Layanan data from database
+  // Fetch Layanan data dari database untuk tab lain
   const { data: layananLaporanData, isLoading: layananLoading, error: layananError, refetch: refetchLayanan } = useLayananLaporan(
     dateRange,
     customStartDate,
     customEndDate
   )
+
+  // State filter layanan untuk performa CS (khusus tab CS)
+  const [selectedLayananCS, setSelectedLayananCS] = useState('all')
+  
+  // State untuk pagination Kota/Kabupaten
+  const [kotaCurrentPage, setKotaCurrentPage] = useState(1)
+  const [kotaItemsPerPage, setKotaItemsPerPage] = useState('10')
+  const { data: layananListDataCS, isLoading: layananListLoadingCS } = useLayananMaster()
 
   // Fetch Tipe Faskes data from database
   const { data: tipeFaskesLaporanData, isLoading: tipeFaskesLoading, error: tipeFaskesError, refetch: refetchTipeFaskes } = useTipeFaskesLaporan(
@@ -103,11 +134,14 @@ export default function LaporanPage() {
     customEndDate
   )
 
-  // Fetch CS Performance data from database
+  // (duplikat dihapus, gunakan hanya variabel di atas untuk filter CS)
+
+  // Fetch CS Performance data dari database dengan filter layanan
   const { data: csPerformanceData, isLoading: csLoading, error: csError, refetch: refetchCs } = useCsPerformance(
     dateRange,
     customStartDate,
-    customEndDate
+    customEndDate,
+    selectedLayananCS === 'all' ? '' : selectedLayananCS
   )
 
   // Fetch Monthly Ads Spend data from database
@@ -117,176 +151,7 @@ export default function LaporanPage() {
     customEndDate
   )
 
-  // Handle date range change
-  const handleDateRangeChange = (e) => {
-    const value = e.target.value
-    setDateRange(value)
-    setShowCustomDate(value === 'custom')
-  }
-
-  // Refetch data when filter changes
-  useEffect(() => {
-    if (dateRange === 'custom' && customStartDate && customEndDate) {
-      refetchSummary()
-      refetchSumberLeads()
-      refetchKodeAds()
-      refetchLayanan()
-      refetchTipeFaskes()
-      refetchKota()
-    } else if (dateRange !== 'custom') {
-      refetchSummary()
-      refetchSumberLeads()
-      refetchKodeAds()
-      refetchLayanan()
-      refetchTipeFaskes()
-      refetchKota()
-    }
-  }, [dateRange, customStartDate, customEndDate, refetchSummary, refetchSumberLeads, refetchKodeAds, refetchLayanan, refetchTipeFaskes, refetchKota])
-  
-  // State untuk accordion Kode Ads
-  const [expandedAdsCode, setExpandedAdsCode] = useState(null)
-  
-  // State untuk accordion Sumber Leads Organik
-  const [expandedOrganikSources, setExpandedOrganikSources] = useState(false)
-  
-  // State untuk pagination Kota/Kabupaten
-  const [kotaCurrentPage, setKotaCurrentPage] = useState(1)
-  const [kotaItemsPerPage, setKotaItemsPerPage] = useState('5')
-
-  // State untuk Rekap Bulanan Ads Spend
-  const [selectedAdsCode, setSelectedAdsCode] = useState('')
-  const [selectedLeadSource, setSelectedLeadSource] = useState('')
-  const [selectedLayanan, setSelectedLayanan] = useState('')
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
-
-  // Data dummy untuk ID Ads berdasarkan Kode Ads dengan Customer dan Total Nilai Langganan
-  const adsData = {
-    'FB001': [
-      { id: 'FB001-001', name: 'Healthcare Campaign A', prospek: 234, leads: 67, ctr: '28.6%', customer: 45, totalNilaiLangganan: 85000000 },
-      { id: 'FB001-002', name: 'Medical Equipment Promo', prospek: 198, leads: 45, ctr: '22.7%', customer: 32, totalNilaiLangganan: 67800000 },
-      { id: 'FB001-003', name: 'Hospital Partnership', prospek: 231, leads: 44, ctr: '19.0%', customer: 29, totalNilaiLangganan: 58900000 }
-    ],
-    'GG002': [
-      { id: 'GG002-001', name: 'Google Search Medical', prospek: 289, leads: 52, ctr: '18.0%', customer: 38, totalNilaiLangganan: 72500000 },
-      { id: 'GG002-002', name: 'Display Network Health', prospek: 249, leads: 46, ctr: '18.5%', customer: 34, totalNilaiLangganan: 65200000 }
-    ],
-    'FB003': [
-      { id: 'FB003-001', name: 'Hospital Outreach Campaign', prospek: 198, leads: 32, ctr: '16.2%', customer: 23, totalNilaiLangganan: 42800000 },
-      { id: 'FB003-002', name: 'Medical Services Awareness', prospek: 226, leads: 35, ctr: '15.5%', customer: 26, totalNilaiLangganan: 48600000 }
-    ],
-    'IG004': [
-      { id: 'IG004-001', name: 'Instagram Health Stories', prospek: 167, leads: 38, ctr: '22.8%', customer: 27, totalNilaiLangganan: 51300000 },
-      { id: 'IG004-002', name: 'Medical Equipment Showcase', prospek: 185, leads: 35, ctr: '18.9%', customer: 25, totalNilaiLangganan: 47500000 }
-    ],
-    'WA005': [
-      { id: 'WA005-001', name: 'WhatsApp Direct Marketing', prospek: 143, leads: 23, ctr: '16.1%', customer: 17, totalNilaiLangganan: 32400000 },
-      { id: 'WA005-002', name: 'Personal Health Consultation', prospek: 146, leads: 22, ctr: '15.1%', customer: 16, totalNilaiLangganan: 30800000 }
-    ],
-    'GAD006': [
-      { id: 'GAD006-001', name: 'Google Ads Healthcare', prospek: 178, leads: 26, ctr: '14.6%', customer: 19, totalNilaiLangganan: 36200000 },
-      { id: 'GAD006-002', name: 'Medical Device Promotion', prospek: 134, leads: 20, ctr: '14.9%', customer: 14, totalNilaiLangganan: 27600000 }
-    ]
-  }
-
-  // Data summary untuk Kode Ads (dihitung dari data detail di atas)
-  const adsCodeSummary = {
-    'FB001': { 
-      prospek: 663, 
-      leads: 156, 
-      ctr: 23.5,
-      customer: 106, // 45 + 32 + 29
-      totalNilaiLangganan: 211700000 // 85000000 + 67800000 + 58900000
-    },
-    'GG002': { 
-      prospek: 538, 
-      leads: 98, 
-      ctr: 18.2,
-      customer: 72, // 38 + 34
-      totalNilaiLangganan: 137700000 // 72500000 + 65200000
-    },
-    'FB003': { 
-      prospek: 424, 
-      leads: 67, 
-      ctr: 15.8,
-      customer: 49, // 23 + 26
-      totalNilaiLangganan: 91400000 // 42800000 + 48600000
-    },
-    'IG004': { 
-      prospek: 352, 
-      leads: 73, 
-      ctr: 20.7,
-      customer: 52, // 27 + 25
-      totalNilaiLangganan: 98800000 // 51300000 + 47500000
-    },
-    'WA005': { 
-      prospek: 289, 
-      leads: 45, 
-      ctr: 15.6,
-      customer: 33, // 17 + 16
-      totalNilaiLangganan: 63200000 // 32400000 + 30800000
-    },
-    'GAD006': { 
-      prospek: 312, 
-      leads: 46, 
-      ctr: 14.7,
-      customer: 33, // 19 + 14
-      totalNilaiLangganan: 63800000 // 36200000 + 27600000
-    }
-  }
-
-  // Color classes untuk chart
-  const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
-
-  // Fungsi untuk format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount)
-  }
-
-  // Fungsi untuk toggle accordion
-  const toggleAdsCodeAccordion = (adsCode) => {
-    setExpandedAdsCode(expandedAdsCode === adsCode ? null : adsCode)
-  }
-  
-  // Fungsi untuk toggle accordion Sumber Leads Organik
-  const toggleOrganikSourcesAccordion = () => {
-    setExpandedOrganikSources(!expandedOrganikSources)
-  }
-
-  // Proses data sumber leads dari server (sudah dikelompokkan)
-  const processedLeadSources = useMemo(() => {
-    if (!sumberLeadsData?.data || sumberLeadsData.data.length === 0) {
-      return []
-    }
-    // Sort data: Organik selalu di posisi paling atas
-    const sorted = [...sumberLeadsData.data].sort((a, b) => {
-      if (a.name === 'Organik') return -1
-      if (b.name === 'Organik') return 1
-      return 0
-    })
-    // Normalize items to avoid runtime errors when fields are missing
-    return sorted.map(item => ({
-      name: item?.name ?? 'Unknown',
-      prospek: typeof item?.prospek === 'number' ? item.prospek : Number(item?.prospek) || 0,
-      leads: typeof item?.leads === 'number' ? item.leads : Number(item?.leads) || 0,
-      customer: typeof item?.customer === 'number' ? item.customer : Number(item?.customer) || 0,
-      totalNilaiLangganan: typeof item?.totalNilaiLangganan === 'number' ? item.totalNilaiLangganan : Number(item?.totalNilaiLangganan) || 0,
-      ctr: typeof item?.ctr === 'number' ? item.ctr : Number(item?.ctr) || 0,
-      // carry-through any other properties safely
-      ...item,
-    }))
-  }, [sumberLeadsData])
-
-  // Data organik individual untuk accordion, ambil dari server agar konsisten
-  const organikLeadSources = useMemo(() => {
-    return sumberLeadsData?.breakdown?.organik ?? []
-  }, [sumberLeadsData])
-
-  // Process kode ads data from API with colors for chart
+  // Process sumber leads data from API with colors
   const processedKodeAdsData = useMemo(() => {
     const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
     
@@ -348,19 +213,45 @@ export default function LaporanPage() {
     }))
   }, [kotaLaporanData])
 
-  // Process CS performance data from API with colors
+  // Process CS performance data from API (no color assignment, color handled in table row)
   const processedCsData = useMemo(() => {
-    const colorClasses = ['blue', 'green', 'orange', 'purple', 'indigo', 'emerald', 'pink', 'teal']
-    
     if (!csPerformanceData?.data || csPerformanceData.data.length === 0) {
       return []
     }
+    return csPerformanceData.data
+  }, [csPerformanceData])
+
+  // Process sumber leads data from API with colors and grouping
+  const processedLeadSources = useMemo(() => {
+    const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
     
-    return csPerformanceData.data.map((item, index) => ({
+    if (!sumberLeadsData?.data || sumberLeadsData.data.length === 0) {
+      return []
+    }
+    
+    return sumberLeadsData.data.map((item, index) => ({
       ...item,
       color: colorClasses[index % colorClasses.length]
     }))
-  }, [csPerformanceData])
+  }, [sumberLeadsData])
+
+  // Extract organik lead sources from breakdown
+  const organikLeadSources = useMemo(() => {
+    return sumberLeadsData?.breakdown?.organik || []
+  }, [sumberLeadsData])
+
+  // State for accordion expansions
+  const [expandedOrganikSources, setExpandedOrganikSources] = useState(false)
+  const [expandedAdsCode, setExpandedAdsCode] = useState<string | null>(null)
+
+  // Toggle functions for accordions
+  const toggleOrganikSourcesAccordion = () => {
+    setExpandedOrganikSources(!expandedOrganikSources)
+  }
+
+  const toggleAdsCodeAccordion = (kode: string) => {
+    setExpandedAdsCode(expandedAdsCode === kode ? null : kode)
+  }
 
   // Fungsi untuk pagination Kota/Kabupaten
   const kotaTotalItems = kotaData.length
@@ -510,49 +401,19 @@ export default function LaporanPage() {
 
   // Summary stats dari database atau default values
   const summaryStats = (() => {
-    try {
-      if (summaryData?.data) {
-        return [
-          {
-            title: "Total Prospek",
-            value: (summaryData.data.totalProspek || 0).toLocaleString('id-ID'),
-            change: "+0%",
-            trend: "up",
-            icon: Users,
-            color: "blue"
-          },
-          {
-            title: "Total Leads",
-            value: (summaryData.data.totalLeads || 0).toLocaleString('id-ID'),
-            change: "+0%",
-            trend: "up",
-            icon: Target,
-            color: "green"
-          },
-          {
-            title: "CTR Leads",
-            value: `${(summaryData.data.ctrLeads || 0).toFixed(1)}%`,
-            change: "+0%",
-            trend: "up",
-            icon: TrendingUp,
-            color: "purple"
-          },
-          {
-            title: "Total Spam",
-            value: (summaryData.data.totalSpam || 0).toLocaleString('id-ID'),
-            change: "0%",
-            trend: "down",
-            icon: Activity,
-            color: "orange"
-          }
-        ]
-      }
-    } catch (error) {
-      console.error('Error creating summary stats:', error)
+    if (csData && csData.length > 0) {
+      // Calculate summary stats from csData
+      const totalProspek = csData.reduce((sum, cs) => sum + (cs.prospek || 0), 0)
+      const totalLeads = csData.reduce((sum, cs) => sum + (cs.leads || 0), 0)
+      const totalCustomer = csData.reduce((sum, cs) => sum + (cs.customer || 0), 0)
+      const totalNilaiLangganan = csData.reduce((sum, cs) => sum + (cs.totalNilaiLangganan || 0), 0)
+      const ctrLeads = totalProspek > 0 ? ((totalLeads / totalProspek) * 100) : 0
+      const ctrCustomer = totalLeads > 0 ? ((totalCustomer / totalLeads) * 100) : 0
+
       return [
         {
           title: "Total Prospek",
-          value: "0",
+          value: totalProspek.toLocaleString(),
           change: "+0%",
           trend: "up",
           icon: Users,
@@ -560,7 +421,7 @@ export default function LaporanPage() {
         },
         {
           title: "Total Leads",
-          value: "0",
+          value: totalLeads.toString(),
           change: "+0%",
           trend: "up",
           icon: Target,
@@ -568,7 +429,7 @@ export default function LaporanPage() {
         },
         {
           title: "CTR Leads",
-          value: "0%",
+          value: ctrLeads.toFixed(1) + "%",
           change: "+0%",
           trend: "up",
           icon: TrendingUp,
@@ -584,7 +445,7 @@ export default function LaporanPage() {
         }
       ]
     }
-    
+
     return [
       {
         title: "Total Prospek",
@@ -2012,224 +1873,257 @@ export default function LaporanPage() {
 
           {/* Performas CS Tab */}
           <TabsContent value="performas-cs">
-            {csLoading ? (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
-                <span className="ml-3 text-slate-600">Memuat data Performas CS...</span>
+              {/* Filter Layanan */}
+              <div className="mb-4 flex items-center gap-4">
+                <label htmlFor="filter-layanan-cs" className="text-sm font-medium text-slate-700">Filter Layanan:</label>
+                <Select
+                  value={selectedLayananCS}
+                  onValueChange={setSelectedLayananCS}
+                  disabled={layananListLoadingCS}
+                >
+                  <SelectTrigger className="w-56" id="filter-layanan-cs">
+                    <SelectValue placeholder="Semua Layanan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Layanan</SelectItem>
+                    {layananListDataCS?.data?.map((layanan) => (
+                      <SelectItem key={layanan.nama} value={layanan.id?.toString() || `layanan-${layanan.nama}`}>{layanan.nama}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            ) : csError ? (
-              <div className="flex flex-col items-center justify-center h-64">
-                <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
-                <p className="text-slate-600 mb-4">Gagal memuat data Performas CS</p>
-                <Button onClick={() => refetchCs()} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Coba Lagi
-                </Button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Tabel Performas CS */}
-              <Card className="bg-white shadow-lg border-slate-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5 text-purple-600" />
-                    Performas CS
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50 border-b-2 border-slate-200">
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Nama CS</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Prospek</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Leads</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Customer</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Total Nilai Langganan</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Leads</TableHead>
-                          <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Customer</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {csData.map((cs, index) => {
-                          const colorClasses = {
-                            blue: { badge: 'border-blue-300 bg-blue-50 text-blue-700', bar: 'bg-blue-500', text: 'text-blue-600' },
-                            green: { badge: 'border-green-300 bg-green-50 text-green-700', bar: 'bg-green-500', text: 'text-green-600' },
-                            orange: { badge: 'border-orange-300 bg-orange-50 text-orange-700', bar: 'bg-orange-500', text: 'text-orange-600' },
-                            purple: { badge: 'border-purple-300 bg-purple-50 text-purple-700', bar: 'bg-purple-500', text: 'text-purple-600' },
-                            indigo: { badge: 'border-indigo-300 bg-indigo-50 text-indigo-700', bar: 'bg-indigo-500', text: 'text-indigo-600' },
-                            emerald: { badge: 'border-emerald-300 bg-emerald-50 text-emerald-700', bar: 'bg-emerald-500', text: 'text-emerald-600' },
-                            pink: { badge: 'border-pink-300 bg-pink-50 text-pink-700', bar: 'bg-pink-500', text: 'text-pink-600' },
-                            teal: { badge: 'border-teal-300 bg-teal-50 text-teal-700', bar: 'bg-teal-500', text: 'text-teal-600' }
-                          }
-                          const colors = colorClasses[cs.color] || colorClasses.blue
-                          
-                          return (
-                            <TableRow key={index} className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200">
-                              <TableCell className="py-4 px-4">
-                                <Badge variant="outline" className={`text-xs rounded-full ${colors.badge} font-medium px-3 py-1`}>
-                                  {cs.name}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{cs.prospek.toLocaleString()}</TableCell>
-                              <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">{cs.leads}</TableCell>
-                              <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                                <div className="flex items-center gap-1">
-                                  <Users className="h-4 w-4 text-blue-500" />
-                                  <span className="font-bold text-blue-600">{cs.customer || 0}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
-                                <div className="font-bold text-green-600">{formatCurrency(cs.totalNilaiLangganan || 0)}</div>
-                                <div className="text-xs text-slate-500">total nilai</div>
-                              </TableCell>
-                              <TableCell className="py-4 px-4">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                    <div 
-                                      className={`h-2 ${colors.bar} rounded-full transition-all duration-300`}
-                                      style={{width: `${Math.min(cs.ctr * 3.5, 100)}%`}}
-                                    ></div>
-                                  </div>
-                                  <span className={`text-sm font-bold ${colors.text}`}>{cs.ctr}%</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="py-4 px-4">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-16 h-2 bg-slate-200 rounded-full">
-                                    <div 
-                                      className="h-2 bg-green-500 rounded-full transition-all duration-300"
-                                      style={{width: `${Math.min(((cs.customer || 0) / (cs.leads || 1)) * 100 * 2, 100)}%`}}
-                                    ></div>
-                                  </div>
-                                  <span className="text-sm font-bold text-green-600">
-                                    {cs.leads > 0 ? (((cs.customer || 0) / cs.leads) * 100).toFixed(1) : '0.0'}%
-                                  </span>
-                                </div>
-                              </TableCell>
+              {csLoading ? (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                  <span className="ml-3 text-slate-600">Memuat data Performas CS...</span>
+                </div>
+              ) : csError ? (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <AlertTriangle className="h-12 w-12 text-orange-500 mb-4" />
+                  <p className="text-slate-600 mb-4">Gagal memuat data Performas CS</p>
+                  <Button onClick={() => refetchCs()} variant="outline">
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Coba Lagi
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Tabel Performas CS */}
+                  <Card className="bg-white shadow-lg border-slate-200">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <TrendingUp className="h-5 w-5 text-purple-600" />
+                        Performance CS
+                      </CardTitle>
+                      <p className="text-sm text-slate-600">Performa Customer Service berdasarkan konversi leads</p>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50 border-b-2 border-slate-200">
+                              <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CS Name</TableHead>
+                              <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Prospek</TableHead>
+                              <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Leads</TableHead>
+                              <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">CTR Leads</TableHead>
+                              <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Customer</TableHead>
+                              <TableHead className="font-semibold text-slate-700 py-4 px-4 text-left">Total Nilai Langganan</TableHead>
                             </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Summary Stats */}
-                  <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="text-center">
-                        <span className="text-slate-600">Total Prospek</span>
-                        <p className="font-bold text-slate-900 text-lg">{csData.reduce((sum, cs) => sum + cs.prospek, 0).toLocaleString()}</p>
+                          </TableHeader>
+                          <TableBody>
+                            {csData && csData.length > 0 ? (
+                              csData.map((cs, index) => {
+                                const colors = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
+                                const color = colors[index % colors.length]
+                                
+                                return (
+                                  <TableRow key={cs.name} className="hover:bg-slate-50 border-b border-slate-100 transition-colors duration-200">
+                                    <TableCell className="py-4 px-4">
+                                      <Badge 
+                                        variant="outline" 
+                                        className={`text-xs rounded-full font-medium px-3 py-1 ${
+                                          color === 'blue' 
+                                            ? 'border-blue-300 bg-blue-50 text-blue-700'
+                                            : color === 'green'
+                                            ? 'border-green-300 bg-green-50 text-green-700'
+                                            : color === 'purple'
+                                            ? 'border-purple-300 bg-purple-50 text-purple-700'
+                                            : color === 'orange'
+                                            ? 'border-orange-300 bg-orange-50 text-orange-700'
+                                            : color === 'indigo'
+                                            ? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+                                            : color === 'emerald'
+                                            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                                            : color === 'pink'
+                                            ? 'border-pink-300 bg-pink-50 text-pink-700'
+                                            : color === 'teal'
+                                            ? 'border-teal-300 bg-teal-50 text-teal-700'
+                                            : 'border-slate-300 bg-slate-50 text-slate-700'
+                                        }`}
+                                      >
+                                        {cs.name}
+                                      </Badge>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
+                                      {cs.prospek.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
+                                      {cs.leads}
+                                    </TableCell>
+                                    <TableCell className="py-4 px-4">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-16 h-2 bg-slate-200 rounded-full">
+                                          <div 
+                                            className={`h-2 rounded-full ${
+                                              color === 'blue' ? 'bg-blue-500'
+                                              : color === 'green' ? 'bg-green-500'
+                                              : color === 'purple' ? 'bg-purple-500'
+                                              : color === 'orange' ? 'bg-orange-500'
+                                              : color === 'indigo' ? 'bg-indigo-500'
+                                              : color === 'emerald' ? 'bg-emerald-500'
+                                              : color === 'pink' ? 'bg-pink-500'
+                                              : color === 'teal' ? 'bg-teal-500'
+                                              : 'bg-slate-500'
+                                            }`}
+                                            style={{width: `${Math.min(cs.ctr * 3, 100)}%`}}
+                                          ></div>
+                                        </div>
+                                        <span 
+                                          className={`text-sm font-bold ${
+                                            color === 'blue' ? 'text-blue-600'
+                                            : color === 'green' ? 'text-green-600'
+                                            : color === 'purple' ? 'text-purple-600'
+                                            : color === 'orange' ? 'text-orange-600'
+                                            : color === 'indigo' ? 'text-indigo-600'
+                                            : color === 'emerald' ? 'text-emerald-600'
+                                            : color === 'pink' ? 'text-pink-600'
+                                            : color === 'teal' ? 'text-teal-600'
+                                            : 'text-slate-600'
+                                          }`}
+                                        >
+                                          {cs.ctr.toFixed(1)}%
+                                        </span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
+                                      <div className="flex items-center gap-1">
+                                        <Users className="h-4 w-4 text-blue-500" />
+                                        <span className="font-bold text-blue-600">{cs.customer}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="py-4 px-4 text-sm text-slate-900 font-medium">
+                                      <div className="font-bold text-green-600">{formatCurrency(cs.totalNilaiLangganan)}</div>
+                                      <div className="text-xs text-slate-500">total nilai</div>
+                                    </TableCell>
+                                  </TableRow>
+                                )
+                              })
+                            ) : (
+                              <TableRow>
+                                <TableCell colSpan={6} className="py-8 text-center text-slate-500">
+                                  Tidak ada data performas CS untuk periode ini
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
                       </div>
-                      <div className="text-center">
-                        <span className="text-slate-600">Total Leads</span>
-                        <p className="font-bold text-purple-600 text-lg">{csData.reduce((sum, cs) => sum + cs.leads, 0)}</p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                    </CardContent>
+                  </Card>
 
-              {/* Pie Chart Performas CS */}
-              <Card className="bg-white shadow-lg border-slate-200">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <PieChart className="h-5 w-5 text-indigo-600" />
-                    Distribusi Leads per CS
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {/* Pie Chart Visual */}
-                  <div className="relative h-64 flex items-center justify-center mb-6">
-                    <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
-                      {(() => {
-                        const totalLeads = csData.reduce((sum, cs) => sum + cs.leads, 0)
-                        let currentOffset = 0
-                        const colors = {
-                          blue: '#3B82F6',
-                          green: '#10B981',
-                          orange: '#F59E0B',
-                          purple: '#8B5CF6',
-                          indigo: '#6366F1',
-                          emerald: '#059669',
-                          pink: '#EC4899',
-                          teal: '#14B8A6'
-                        }
-                        
-                        return csData.map((cs, index) => {
-                          const percentage = (cs.leads / totalLeads) * 100
-                          const circumference = 2 * Math.PI * 80
-                          const strokeLength = (percentage / 100) * circumference
-                          const strokeDasharray = `${strokeLength} ${circumference}`
-                          const strokeDashoffset = -currentOffset
-                          currentOffset += strokeLength
-                          
-                          return (
-                            <circle
-                              key={index}
-                              cx="100"
-                              cy="100"
-                              r="80"
-                              fill="none"
-                              stroke={colors[cs.color]}
-                              strokeWidth="20"
-                              strokeDasharray={strokeDasharray}
-                              strokeDashoffset={strokeDashoffset}
-                              className="transition-all duration-300 hover:stroke-width-[24]"
-                            />
-                          )
-                        })
-                      })()}
-                    </svg>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-slate-900">{csData.reduce((sum, cs) => sum + cs.leads, 0)}</p>
-                        <p className="text-xs text-slate-500">Total Leads</p>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Chart Distribusi CS Performance */}
+                  <Card className="bg-white shadow-lg border-slate-200">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <PieChart className="h-5 w-5 text-green-600" />
+                        Distribusi Performance CS
+                      </CardTitle>
+                      <p className="text-sm text-slate-600">Perbandingan performa CS berdasarkan total nilai langganan</p>
+                    </CardHeader>
+                    <CardContent>
+                      {csData && csData.length > 0 ? (
+                        <>
+                          {/* Pie Chart Visual */}
+                          <div className="relative h-64 flex items-center justify-center mb-6">
+                            <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
+                              {(() => {
+                                const totalValue = csData.reduce((sum, cs) => sum + cs.totalNilaiLangganan, 0)
+                                if (totalValue === 0) return null
+                                
+                                let currentOffset = 0
+                                const colors = ['#64748b', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#ef4444']
+                                
+                                return csData.slice(0, 8).map((cs, index) => {
+                                  const percentage = (cs.totalNilaiLangganan / totalValue) * 100
+                                  const circumference = 2 * Math.PI * 80
+                                  const strokeLength = (percentage / 100) * circumference
+                                  const strokeDasharray = `${strokeLength} ${circumference}`
+                                  const strokeDashoffset = -currentOffset
+                                  currentOffset += strokeLength
+                                  
+                                  return (
+                                    <circle
+                                      key={cs.name}
+                                      cx="100"
+                                      cy="100"
+                                      r="80"
+                                      fill="none"
+                                      stroke={colors[index % colors.length]}
+                                      strokeWidth="20"
+                                      strokeDasharray={strokeDasharray}
+                                      strokeDashoffset={strokeDashoffset}
+                                      className="transition-all duration-300 hover:stroke-width-[24]"
+                                    />
+                                  )
+                                })
+                              })()}
+                            </svg>
+                            
+                            {/* Center label */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <div className="text-center">
+                                <p className="text-2xl font-bold text-slate-900">
+                                  {csData.length}
+                                </p>
+                                <p className="text-sm text-slate-600">CS Active</p>
+                              </div>
+                            </div>
+                          </div>
 
-                  {/* Legend */}
-                  <div className="mt-6 grid grid-cols-2 gap-2">
-                    {csData.map((cs, index) => {
-                      const colors = {
-                        blue: 'bg-blue-500',
-                        green: 'bg-green-500',
-                        orange: 'bg-orange-500',
-                        purple: 'bg-purple-500',
-                        indigo: 'bg-indigo-500',
-                        emerald: 'bg-emerald-500',
-                        pink: 'bg-pink-500',
-                        teal: 'bg-teal-500'
-                      }
-                      const totalLeads = csData.reduce((sum, cs) => sum + cs.leads, 0)
-                      const percentage = ((cs.leads / totalLeads) * 100).toFixed(1)
-                      
-                      return (
-                        <div key={index} className="flex items-center gap-2 text-sm">
-                          <div className={`w-3 h-3 rounded-full ${colors[cs.color]}`}></div>
-                          <span className="text-slate-600 truncate">{cs.name.split(' ')[0]}</span>
-                          <span className="text-slate-800 font-medium ml-auto">{percentage}%</span>
+                          {/* Legend */}
+                          <div className="space-y-3">
+                            {csData.slice(0, 8).map((cs, index) => {
+                              const totalValue = csData.reduce((sum, cs) => sum + cs.totalNilaiLangganan, 0)
+                              const percentage = totalValue > 0 ? ((cs.totalNilaiLangganan / totalValue) * 100).toFixed(0) : '0'
+                              const colors = ['slate', 'green', 'orange', 'purple', 'pink', 'cyan', 'lime', 'red']
+                              const color = colors[index % colors.length]
+                              
+                              return (
+                                <div key={cs.name} className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className={`w-3 h-3 rounded-full bg-${color}-500`}></div>
+                                    <span className="text-sm text-slate-700">{cs.name}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className={`text-sm font-bold text-${color}-600`}>
+                                      {formatCurrency(cs.totalNilaiLangganan)} ({percentage}%)
+                                    </span>
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+                          <PieChart className="h-12 w-12 mb-2" />
+                          <p>Tidak ada data untuk ditampilkan</p>
                         </div>
-                      )
-                    })}
-                  </div>
-
-                  {/* Performance Summary */}
-                  <div className="mt-6 pt-4 border-t border-slate-200">
-                    <div className="text-center">
-                      <p className="text-sm text-slate-600">
-                        Rata-rata CTR: <span className="font-bold text-purple-600">{(csData && csData.length > 0 ? (csData.reduce((sum, cs) => sum + (cs.ctr || 0), 0) / csData.length).toFixed(1) : '0.0')}%</span>
-                      </p>
-                      <p className="text-sm text-slate-600 mt-1">
-                        Top Performer: <span className="font-bold text-blue-600">{csData?.[0]?.name ?? '-'}</span> ({csData?.[0]?.ctr ?? 0}%)
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
           </TabsContent>
 
           {/* LTV & Retensi Tab */}

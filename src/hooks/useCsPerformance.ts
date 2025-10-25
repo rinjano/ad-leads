@@ -22,16 +22,20 @@ interface CsPerformanceResponse {
 export function useCsPerformance(
   filter: string = 'thismonth',
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  layananId?: string
 ) {
   return useQuery<CsPerformanceResponse>({
-    queryKey: ['csPerformance', filter, startDate, endDate],
+    queryKey: ['csPerformance', filter, startDate, endDate, layananId],
     queryFn: async () => {
       const params = new URLSearchParams({ filter })
 
       if (filter === 'custom' && startDate && endDate) {
         params.append('startDate', startDate)
         params.append('endDate', endDate)
+      }
+      if (layananId && layananId !== 'null' && layananId !== '') {
+        params.append('layananId', layananId)
       }
 
       const response = await fetch(`/api/laporan/cs-performance?${params}`)
