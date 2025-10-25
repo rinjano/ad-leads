@@ -2047,14 +2047,14 @@ export default function LaporanPage() {
                           <div className="relative h-64 flex items-center justify-center mb-6">
                             <svg width="200" height="200" viewBox="0 0 200 200" className="transform -rotate-90">
                               {(() => {
-                                const totalValue = csData.reduce((sum, cs) => sum + cs.totalNilaiLangganan, 0)
-                                if (totalValue === 0) return null
+                                const totalLeads = csData.reduce((sum, cs) => sum + cs.leads, 0)
+                                if (totalLeads === 0) return null
                                 
                                 let currentOffset = 0
                                 const colors = ['#64748b', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16', '#ef4444']
                                 
                                 return csData.slice(0, 8).map((cs, index) => {
-                                  const percentage = (cs.totalNilaiLangganan / totalValue) * 100
+                                  const percentage = (cs.leads / totalLeads) * 100
                                   const circumference = 2 * Math.PI * 80
                                   const strokeLength = (percentage / 100) * circumference
                                   const strokeDasharray = `${strokeLength} ${circumference}`
@@ -2083,9 +2083,9 @@ export default function LaporanPage() {
                             <div className="absolute inset-0 flex items-center justify-center">
                               <div className="text-center">
                                 <p className="text-2xl font-bold text-slate-900">
-                                  {csData.length}
+                                  {csData.reduce((sum, cs) => sum + cs.leads, 0)}
                                 </p>
-                                <p className="text-sm text-slate-600">CS Active</p>
+                                <p className="text-sm text-slate-600">Total Leads</p>
                               </div>
                             </div>
                           </div>
@@ -2093,8 +2093,8 @@ export default function LaporanPage() {
                           {/* Legend */}
                           <div className="space-y-3">
                             {csData.slice(0, 8).map((cs, index) => {
-                              const totalValue = csData.reduce((sum, cs) => sum + cs.totalNilaiLangganan, 0)
-                              const percentage = totalValue > 0 ? ((cs.totalNilaiLangganan / totalValue) * 100).toFixed(0) : '0'
+                              const totalLeads = csData.reduce((sum, cs) => sum + cs.leads, 0)
+                              const percentage = totalLeads > 0 ? ((cs.leads / totalLeads) * 100).toFixed(0) : '0'
                               const colors = ['slate', 'green', 'orange', 'purple', 'pink', 'cyan', 'lime', 'red']
                               const color = colors[index % colors.length]
                               
@@ -2106,7 +2106,7 @@ export default function LaporanPage() {
                                   </div>
                                   <div className="text-right">
                                     <span className={`text-sm font-bold text-${color}-600`}>
-                                      {formatCurrency(cs.totalNilaiLangganan)} ({percentage}%)
+                                      {cs.leads} ({percentage}%)
                                     </span>
                                   </div>
                                 </div>
