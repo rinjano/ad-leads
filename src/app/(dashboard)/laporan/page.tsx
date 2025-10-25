@@ -144,11 +144,12 @@ export default function LaporanPage() {
     selectedLayananCS === 'all' ? '' : selectedLayananCS
   )
 
-  // Fetch Monthly Ads Spend data from database
+  // Fetch Monthly Ads Spend data from database (bypass date filter for this tab)
   const { data: monthlyAdsSpendData, isLoading: monthlyAdsSpendLoading, error: monthlyAdsSpendError, refetch: refetchMonthlyAdsSpend } = useMonthlyAdsSpend(
-    dateRange,
-    customStartDate,
-    customEndDate
+    'all', // Special value to indicate bypass date filter
+    undefined,
+    undefined,
+    true // bypassDateFilter
   )
 
   // Process sumber leads data from API with colors
@@ -313,49 +314,82 @@ export default function LaporanPage() {
   // Fungsi untuk filter data berdasarkan Tahun, Kode Ads, Sumber Leads dan Layanan
   const getFilteredMonthlyData = () => {
     if (!monthlyAdsSpendData) return []
-    let filtered = monthlyAdsSpendData
     
-    // Filter by year
-    filtered = filtered.filter(item => item.year === selectedYear)
+    // Untuk tab Rekap Bulanan Ads Spend, selalu tampilkan semua bulan dari Januari sampai bulan saat ini
+    // terlepas dari filter periode global
+    const currentYear = new Date().getFullYear()
+    const currentMonth = new Date().getMonth() + 1 // getMonth() returns 0-11, so add 1
     
+    const monthOrder = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+    
+    // Tentukan bulan terakhir yang akan ditampilkan
+    const lastMonthIndex = selectedYear === currentYear ? currentMonth - 1 : 11 // 11 = Desember (index 11)
+    
+    // Buat array semua bulan yang harus ditampilkan
+    const allMonths = monthOrder.slice(0, lastMonthIndex + 1).map(month => ({
+      month,
+      year: selectedYear,
+      budgetSpent: 0,
+      prospek: 0,
+      leads: 0,
+      customer: 0,
+      totalNilaiLangganan: 0,
+      ctrLeads: 0,
+      ctrCustomer: 0,
+      costPerLead: 0,
+      kodeAds: '',
+      sumberLeads: '',
+      layanan: ''
+    }))
+    
+    // Filter data berdasarkan tahun yang dipilih
+    let yearFiltered = monthlyAdsSpendData.filter(item => item.year === selectedYear)
+    
+    // Jika ada filter kode ads, sumber leads, atau layanan, terapkan juga
     if (selectedAdsCode) {
-      filtered = filtered.filter(item => item.kodeAds === selectedAdsCode)
+      yearFiltered = yearFiltered.filter(item => item.kodeAds === selectedAdsCode)
     }
     
     if (selectedLeadSource) {
-      filtered = filtered.filter(item => item.sumberLeads === selectedLeadSource)
+      yearFiltered = yearFiltered.filter(item => item.sumberLeads === selectedLeadSource)
     }
 
     if (selectedLayanan) {
-      filtered = filtered.filter(item => 
+      yearFiltered = yearFiltered.filter(item => 
         item.layanan && item.layanan.split(', ').includes(selectedLayanan)
       )
     }
     
-    // Aggregate by month
-    const aggregated = filtered.reduce((acc, item) => {
+    // Aggregate data per bulan
+    const aggregated = yearFiltered.reduce((acc, item) => {
       const existing = acc.find(a => a.month === item.month && a.year === item.year)
       if (existing) {
         existing.budgetSpent += item.budgetSpent
         existing.prospek += item.prospek
         existing.leads += item.leads
-        existing.costPerLead = existing.budgetSpent / existing.leads
-        existing.ctrLeads = (existing.leads / existing.prospek) * 100
+        existing.customer += item.customer || 0
+        existing.totalNilaiLangganan += item.totalNilaiLangganan || 0
+        existing.costPerLead = existing.leads > 0 ? existing.budgetSpent / existing.leads : 0
+        existing.ctrLeads = existing.prospek > 0 ? (existing.leads / existing.prospek) * 100 : 0
+        existing.ctrCustomer = existing.leads > 0 ? (existing.customer / existing.leads) * 100 : 0
       } else {
         acc.push({ ...item })
       }
       return acc
     }, [])
     
-    // Filter hanya bulan yang tersedia di tahun yang dipilih
-    const availableMonths = getAvailableMonthsInYear(selectedYear)
-    const filteredByAvailableMonths = aggregated.filter(item => availableMonths.includes(item.month))
+    // Gabungkan data aggregated dengan semua bulan yang harus ditampilkan
+    const result = allMonths.map(monthData => {
+      const existingData = aggregated.find(item => item.month === monthData.month)
+      if (existingData) {
+        return existingData
+      }
+      return monthData
+    })
     
     // Sort by month chronologically
-    const monthOrder = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-                       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-    
-    return filteredByAvailableMonths.sort((a, b) => {
+    return result.sort((a, b) => {
       return monthOrder.indexOf(a.month) - monthOrder.indexOf(b.month)
     })
   }
@@ -2978,24 +3012,13 @@ export default function LaporanPage() {
                   </div>
                   <div className="mt-4 p-4 bg-slate-50 rounded-lg">
                     <p className="text-sm text-slate-600">
-                      <strong>Info:</strong> Data menampilkan rekap bulanan tahun {selectedYear} dari {selectedAdsCode || 'semua Kode Ads'}, {selectedLeadSource || 'semua Sumber Leads'}, dan {selectedLayanan || 'semua Layanan'} secara gabungan per bulan.
-                      {(() => {
+                      <strong>Info:</strong> Tab ini selalu menampilkan data rekap bulanan dari Januari sampai bulan saat ini ({(() => {
                         const currentYear = new Date().getFullYear()
                         const currentMonth = new Date().getMonth() + 1
                         const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
                                           'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
-                        
-                        if (selectedYear === currentYear) {
-                          return ` Menampilkan data dari Januari sampai ${monthNames[currentMonth - 1]} ${currentYear}.`
-                        } else {
-                          const availableMonths = getAvailableMonthsInYear(selectedYear)
-                          if (availableMonths.length > 0) {
-                            const lastMonth = availableMonths[availableMonths.length - 1]
-                            return ` Menampilkan data dari Januari sampai ${lastMonth} ${selectedYear}.`
-                          }
-                        }
-                        return ""
-                      })()}
+                        return `${monthNames[currentMonth - 1]} ${selectedYear === currentYear ? currentYear : selectedYear}`
+                      })()}) terlepas dari filter periode di atas. Filter Kode Ads, Sumber Leads, dan Layanan tetap berlaku untuk mempersempit data.
                     </p>
                   </div>
                 </CardContent>
@@ -3200,15 +3223,13 @@ export default function LaporanPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
                       <span>
-                        Data period: {(() => {
-                          const availableMonths = getAvailableMonthsInYear(selectedYear)
-                          if (availableMonths.length > 0) {
-                            const firstMonth = availableMonths[0]
-                            const lastMonth = availableMonths[availableMonths.length - 1]
-                            return `${firstMonth} ${selectedYear} - ${lastMonth} ${selectedYear}`
-                          }
-                          return `Tahun ${selectedYear}`
-                        })()}
+                        Data period: Januari - {(() => {
+                          const currentYear = new Date().getFullYear()
+                          const currentMonth = new Date().getMonth() + 1
+                          const monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+                                            'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+                          return `${monthNames[selectedYear === currentYear ? currentMonth - 1 : 11]} ${selectedYear}`
+                        })()} {selectedYear}
                       </span>
                     </div>
                     <div className="text-slate-500">

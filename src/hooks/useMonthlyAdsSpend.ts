@@ -19,15 +19,18 @@ interface MonthlyAdsSpendData {
 export function useMonthlyAdsSpend(
   dateRange: string = 'thismonth',
   customStartDate?: string,
-  customEndDate?: string
+  customEndDate?: string,
+  bypassDateFilter?: boolean
 ) {
   return useQuery({
-    queryKey: ['monthly-ads-spend', dateRange, customStartDate, customEndDate],
+    queryKey: ['monthly-ads-spend', dateRange, customStartDate, customEndDate, bypassDateFilter],
     queryFn: async () => {
       const params = new URLSearchParams({
-        dateRange,
-        ...(customStartDate && { customStartDate }),
-        ...(customEndDate && { customEndDate })
+        ...(bypassDateFilter ? { bypassDateFilter: 'true' } : {
+          dateRange,
+          ...(customStartDate && { customStartDate }),
+          ...(customEndDate && { customEndDate })
+        })
       })
 
       const response = await fetch(`/api/laporan/monthly-ads-spend?${params}`)

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const dateRange = searchParams.get('dateRange') || 'thismonth'
     const customStartDate = searchParams.get('customStartDate')
     const customEndDate = searchParams.get('customEndDate')
+    const bypassDateFilter = searchParams.get('bypassDateFilter') === 'true'
 
     // Build base filter for role-based access
     let baseFilter: any = {}
@@ -23,72 +24,74 @@ export async function GET(request: NextRequest) {
       baseFilter.kodeAdsId = { in: session.user.kodeAds }
     }
 
-    // Build date filter
+    // Build date filter - skip if bypassDateFilter is true
     let dateFilter: any = {}
-    const now = new Date()
+    if (!bypassDateFilter) {
+      const now = new Date()
 
-    if (dateRange === 'custom' && customStartDate && customEndDate) {
-      dateFilter = {
-        tanggalProspek: {
-          gte: new Date(customStartDate),
-          lte: new Date(customEndDate)
+      if (dateRange === 'custom' && customStartDate && customEndDate) {
+        dateFilter = {
+          tanggalProspek: {
+            gte: new Date(customStartDate),
+            lte: new Date(customEndDate)
+          }
         }
-      }
-    } else {
-      switch (dateRange) {
-        case 'today':
-          dateFilter = {
-            tanggalProspek: {
-              gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-              lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+      } else {
+        switch (dateRange) {
+          case 'today':
+            dateFilter = {
+              tanggalProspek: {
+                gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+                lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+              }
             }
-          }
-          break
-        case 'yesterday':
-          const yesterday = new Date(now)
-          yesterday.setDate(yesterday.getDate() - 1)
-          dateFilter = {
-            tanggalProspek: {
-              gte: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()),
-              lt: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate() + 1)
+            break
+          case 'yesterday':
+            const yesterday = new Date(now)
+            yesterday.setDate(yesterday.getDate() - 1)
+            dateFilter = {
+              tanggalProspek: {
+                gte: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()),
+                lt: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate() + 1)
+              }
             }
-          }
-          break
-        case 'thisweek':
-          const startOfWeek = new Date(now)
-          startOfWeek.setDate(now.getDate() - now.getDay())
-          dateFilter = {
-            tanggalProspek: {
-              gte: startOfWeek,
-              lte: now
+            break
+          case 'thisweek':
+            const startOfWeek = new Date(now)
+            startOfWeek.setDate(now.getDate() - now.getDay())
+            dateFilter = {
+              tanggalProspek: {
+                gte: startOfWeek,
+                lte: now
+              }
             }
-          }
-          break
-        case 'thismonth':
-          dateFilter = {
-            tanggalProspek: {
-              gte: new Date(now.getFullYear(), now.getMonth(), 1),
-              lte: now
+            break
+          case 'thismonth':
+            dateFilter = {
+              tanggalProspek: {
+                gte: new Date(now.getFullYear(), now.getMonth(), 1),
+                lte: now
+              }
             }
-          }
-          break
-        case 'lastmonth':
-          const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-          dateFilter = {
-            tanggalProspek: {
-              gte: lastMonth,
-              lte: endOfLastMonth
+            break
+          case 'lastmonth':
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
+            dateFilter = {
+              tanggalProspek: {
+                gte: lastMonth,
+                lte: endOfLastMonth
+              }
             }
-          }
-          break
-        default:
-          dateFilter = {
-            tanggalProspek: {
-              gte: new Date(now.getFullYear(), now.getMonth(), 1),
-              lte: now
+            break
+          default:
+            dateFilter = {
+              tanggalProspek: {
+                gte: new Date(now.getFullYear(), now.getMonth(), 1),
+                lte: now
+              }
             }
-          }
+        }
       }
     }
 
@@ -186,7 +189,7 @@ export async function GET(request: NextRequest) {
 
     // Get budget data from ads_budget table
     const budgetData = await prisma.adsBudget.findMany({
-      where: {
+      where: bypassDateFilter ? {} : {
         updatedAt: dateFilter.tanggalProspek ? {
           gte: dateFilter.tanggalProspek.gte,
           lte: dateFilter.tanggalProspek.lte
