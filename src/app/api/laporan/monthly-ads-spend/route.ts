@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/auth'
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const dateRange = searchParams.get('dateRange') || 'thismonth'
     const customStartDate = searchParams.get('customStartDate')
     const customEndDate = searchParams.get('customEndDate')
+
+    // Build base filter for role-based access
+    let baseFilter: any = {}
+    if (session.user.role === 'cs_support') {
+      baseFilter.createdBy = session.user.id
+    } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
+      baseFilter.kodeAdsId = { in: session.user.kodeAds }
+    }
 
     // Build date filter
     let dateFilter: any = {}
@@ -83,7 +98,8 @@ export async function GET(request: NextRequest) {
         ...dateFilter,
         kodeAdsId: {
           not: null
-        }
+        },
+        ...baseFilter
       },
       include: {
         konversi_customer: {

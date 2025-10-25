@@ -23,7 +23,8 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
-  AlertTriangle
+  AlertTriangle,
+  Lock
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,8 +48,14 @@ import { useKotaLaporan } from '@/hooks/useKotaLaporan'
 import { useCsPerformance } from '@/hooks/useCsPerformance'
 import { DynamicPieChart } from '@/components/DynamicPieChart'
 import { useMonthlyAdsSpend } from '@/hooks/useMonthlyAdsSpend'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function LaporanPage() {
+  const { canAccessMenu, appUser, loading: authLoading } = useAuth()
+
+  // Check if user can access laporan menu
+  const canAccessLaporan = canAccessMenu('laporan')
+
   const [dateRange, setDateRange] = useState('thismonth')
   const [showCustomDate, setShowCustomDate] = useState(false)
   const [customStartDate, setCustomStartDate] = useState('')
@@ -650,6 +657,48 @@ export default function LaporanPage() {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Role-based Access Control */}
+      {authLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="ml-3 text-slate-600">Memverifikasi akses...</span>
+        </div>
+      ) : !canAccessLaporan ? (
+        <div className="bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-slate-50 to-slate-100 border-b border-slate-200 px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Lock className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Akses Ditolak</h1>
+                <p className="text-sm text-slate-600">Anda tidak memiliki izin untuk mengakses halaman ini</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6">
+            <Card className="bg-red-50 border-red-200">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-3 text-red-700">
+                  <AlertTriangle className="h-5 w-5" />
+                  <div>
+                    <p className="font-medium">Izin Diperlukan</p>
+                    <p className="text-sm mt-1">
+                      {appUser?.role === 'cs_support' 
+                        ? 'Sebagai CS Support, Anda hanya dapat mengakses Dashboard untuk melihat data prospek Anda sendiri.'
+                        : appUser?.role === 'advertiser'
+                        ? 'Sebagai Advertiser, Anda dapat mengakses Dashboard, Data Prospek, dan Ads Spend untuk kode iklan yang ditugaskan.'
+                        : 'Akses ke halaman Laporan memerlukan role yang sesuai. Silakan hubungi administrator untuk informasi lebih lanjut.'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ) : (
+        <>
         
         {/* Header Section */}
         <div className="bg-white shadow-lg rounded-2xl border border-slate-200 overflow-hidden">
@@ -3409,6 +3458,8 @@ export default function LaporanPage() {
             </div>
           </TabsContent>
         </Tabs>
+        </>
+      )}
     </div>
   )
 }

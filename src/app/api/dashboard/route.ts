@@ -1,18 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth';
 
 // GET - Fetch dashboard statistics
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRole = session.user.role;
+    const userKodeAds = session.user.kodeAds || [];
+
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'today';
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // Base filter for role-based access
+    let baseFilter: any = {};
+
+    // Apply role-based filtering
+    if (userRole === 'cs_support') {
+      // CS Support can only see prospects they created
+      baseFilter.createdBy = session.user.name;
+    } else if (userRole === 'advertiser' && userKodeAds.length > 0) {
+      // Advertiser can only see prospects from their assigned kode ads
+      baseFilter.kodeAdsId = {
+        in: userKodeAds.map(kode => parseInt(kode.replace(/\D/g, ''))) // Extract IDs from kode strings
+      };
+    }
+    // Super admin, CS representative, and retention see all data (no additional filter)
+
     // Pisahkan filter prospek dan leads
     const now = new Date();
-    let prospekFilter: any = {};
-    let leadsFilter: any = {};
+    let prospekFilter: any = { ...baseFilter };
+    let leadsFilter: any = { ...baseFilter };
     switch (filter) {
       case 'today': {
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());

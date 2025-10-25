@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRole = session.user.role;
+    const userKodeAds = session.user.kodeAds || [];
+
     const { searchParams } = new URL(request.url);
     const filter = searchParams.get('filter') || 'current-month';
     const year = searchParams.get('year');
@@ -10,10 +20,30 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // Base filter for role-based access
+    let baseFilter: any = {};
+
+    // Apply role-based filtering
+    if (userRole === 'advertiser' && userKodeAds.length > 0) {
+      // Advertiser can only see data from their assigned kode ads
+      const kodeAdsIds = await prisma.kodeAds.findMany({
+        where: {
+          kode: {
+            in: userKodeAds
+          }
+        },
+        select: { id: true }
+      });
+      baseFilter.kodeAdsId = {
+        in: kodeAdsIds.map(k => k.id)
+      };
+    }
+    // Super admin, CS support, CS representative, and retention see all data (no additional filter)
+
     // Calculate date range based on filter (using tanggalJadiLeads for leads)
     const now = new Date();
-    let prospekFilter: any = {};
-    let leadsFilter: any = {};
+    let prospekFilter: any = { ...baseFilter };
+    let leadsFilter: any = { ...baseFilter };
 
     switch (filter) {
       case 'today': {

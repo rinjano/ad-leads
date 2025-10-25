@@ -22,7 +22,7 @@ export const registerSchema = z.object({
     message: 'Name must be at least 2 characters.',
   }),
   companyId: z.number().optional(),
-  role: z.enum(['admin', 'user', 'cs_representative', 'advertiser', 'cs_support', 'retention_specialist']).optional(),
+  role: z.enum(['super_admin', 'admin', 'user', 'cs_representative', 'advertiser', 'cs_support', 'retention']).optional(),
 })
 
 export type LoginInput = z.infer<typeof loginSchema>

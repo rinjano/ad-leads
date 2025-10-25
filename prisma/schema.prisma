@@ -161,6 +161,7 @@ model Prospek {
   kota                 String?
   picLeads             String
   keterangan           String?
+  createdBy            String?
   createdAt            DateTime            @default(now())
   updatedAt            DateTime            @updatedAt
   konversi_customer    konversi_customer[]
@@ -196,10 +197,11 @@ model konversi_customer_item {
 }
 
 enum UserRole {
+  super_admin
   admin
   user
   cs_representative
   advertiser
   cs_support
-  retention_specialist
+  retention
 }

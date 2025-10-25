@@ -176,7 +176,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loading = status === 'loading' || loadingAppUser
 
   // Function to get user role data from demo users or database
-  const getUserRoleData = async (email: string): Promise<AppUser | null> => {
+  const getUserRoleData = async (email: string, session?: any): Promise<AppUser | null> => {
     try {
       // First, try to find in demo users
       const demoUser = demoUsers.find(u => u.email === email && u.isActive)
@@ -184,15 +184,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return demoUser
       }
 
-      // In a real application, you would query your users table here:
-      // const { data, error } = await supabase
-      //   .from('users')
-      //   .select('*')
-      //   .eq('email', email)
-      //   .eq('is_active', true)
-      //   .single()
-      
-      // For now, return null if not found in demo users
+      // If not a demo user, create user data based on session role
+      // This handles real database users
+      if (session?.user?.role) {
+        const role = session.user.role as UserRole
+        const userPermissions = rolePermissions[role]
+        
+        if (userPermissions) {
+          return {
+            id: session.user.id || email,
+            email: email,
+            name: session.user.name || email,
+            role: role,
+            isActive: true,
+            assignedAdsCodes: session.user.kodeAds || [],
+            createdAt: new Date().toISOString(),
+            permissions: {
+              canManageUsers: userPermissions.menus.includes('user_management'),
+              canViewAllData: role === 'super_admin' || role === 'cs_representative',
+              canEditData: role === 'super_admin' || role === 'cs_representative',
+              canDeleteData: role === 'super_admin',
+              canAccessAdsSpend: userPermissions.menus.includes('ads_spend'),
+              canAccessLTVRetensi: userPermissions.menus.includes('ltv_retensi')
+            }
+          }
+        }
+      }
+
+      // For now, return null if not found in demo users and no session role
       return null
     } catch (error) {
       console.error('Error getting user role data:', error)
@@ -208,7 +227,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       setLoadingAppUser(true)
       if (session?.user?.email) {
-        const userData = await getUserRoleData(session.user.email)
+        const userData = await getUserRoleData(session.user.email, session)
         setAppUser(userData)
       } else {
         setAppUser(null)

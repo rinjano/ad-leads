@@ -63,7 +63,7 @@ async function main() {
       email: 'retention@demo.com',
       password: 'demo123',
       name: 'Retention Specialist',
-      role: UserRole.retention_specialist,
+      role: UserRole.retention,
       companyId: 1,
     },
   ]

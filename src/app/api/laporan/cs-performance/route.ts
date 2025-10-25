@@ -1,12 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getServerSession } from 'next-auth/next'
+import { authOptions } from '@/auth'
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    }
+
     const searchParams = request.nextUrl.searchParams
     const filter = searchParams.get('filter') || 'thismonth'
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+
+    // Build base filter for role-based access
+    let baseFilter: any = {}
+    if (session.user.role === 'cs_support') {
+      baseFilter.createdBy = session.user.id
+    } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
+      baseFilter.kodeAdsId = { in: session.user.kodeAds }
+    }
 
     // Calculate date range based on filter
     const now = new Date()
@@ -75,7 +90,10 @@ export async function GET(request: NextRequest) {
 
     // Get all prospects with their CS representatives and conversion data
     const prospects = await prisma.prospek.findMany({
-      where: dateFilter,
+      where: {
+        ...dateFilter,
+        ...baseFilter
+      },
       include: {
         konversi_customer: {
           select: {

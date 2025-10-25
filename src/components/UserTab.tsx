@@ -160,24 +160,24 @@ export function UserTab() {
 
   const getRoleBadgeColor = (role: string) => {
     const roleMap: Record<string, string> = {
-      admin: 'bg-purple-100 text-purple-800',
+      super_admin: 'bg-purple-100 text-purple-800',
       user: 'bg-blue-100 text-blue-800',
       cs_representative: 'bg-green-100 text-green-800',
       advertiser: 'bg-orange-100 text-orange-800',
       cs_support: 'bg-cyan-100 text-cyan-800',
-      retention_specialist: 'bg-pink-100 text-pink-800',
+      retention: 'bg-pink-100 text-pink-800',
     };
     return roleMap[role] || 'bg-gray-100 text-gray-800';
   };
 
   const getRoleLabel = (role: string) => {
     const roleLabels: Record<string, string> = {
-      admin: 'Super Admin',
+      super_admin: 'Super Admin',
       user: 'User',
       cs_representative: 'CS Representative',
       advertiser: 'Advertiser',
       cs_support: 'CS Support',
-      retention_specialist: 'Retention',
+      retention: 'Retention',
     };
     return roleLabels[role] || role;
   };
@@ -418,11 +418,11 @@ export function UserTab() {
                   required
                 >
                   <option value="">Pilih Role</option>
-                  <option value="admin">Super Admin</option>
+                  <option value="super_admin">Super Admin</option>
                   <option value="cs_support">CS Support</option>
                   <option value="cs_representative">CS Representative</option>
                   <option value="advertiser">Advertiser</option>
-                  <option value="retention_specialist">Retention</option>
+                  <option value="retention">Retention</option>
                 </select>
               </div>
 
@@ -556,11 +556,11 @@ export function UserTab() {
                   required
                 >
                   <option value="">Pilih Role</option>
-                  <option value="admin">Super Admin</option>
+                  <option value="super_admin">Super Admin</option>
                   <option value="cs_support">CS Support</option>
                   <option value="cs_representative">CS Representative</option>
                   <option value="advertiser">Advertiser</option>
-                  <option value="retention_specialist">Retention</option>
+                  <option value="retention">Retention</option>
                 </select>
               </div>
 

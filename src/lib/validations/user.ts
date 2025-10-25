@@ -12,7 +12,7 @@ export const userSchema = z.object({
     .string()
     .min(6, 'Password minimal 6 karakter')
     .optional(),
-  role: z.enum(['admin', 'user', 'cs_representative', 'advertiser', 'cs_support', 'retention_specialist']),
+  role: z.enum(['super_admin', 'cs_support', 'cs_representative', 'advertiser', 'retention']),
   kodeAdsIds: z.array(z.number()).optional(), // Array of KodeAds IDs for advertiser
 })
 

@@ -1,10 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/auth';
 
 // GET - Fetch all prospek
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userRole = session.user.role;
+    const userKodeAds = session.user.kodeAds || [];
+
+    // Base filter for role-based access
+    let baseFilter: any = {};
+
+    // Apply role-based filtering
+    if (userRole === 'cs_support') {
+      // CS Support can only see prospects they created
+      baseFilter.createdBy = session.user.name;
+    } else if (userRole === 'advertiser' && userKodeAds.length > 0) {
+      // Advertiser can only see prospects from their assigned kode ads
+      const kodeAdsIds = await prisma.kodeAds.findMany({
+        where: {
+          kode: {
+            in: userKodeAds
+          }
+        },
+        select: { id: true }
+      });
+      baseFilter.kodeAdsId = {
+        in: kodeAdsIds.map(k => k.id)
+      };
+    }
+    // Super admin, CS representative, and retention see all data (no additional filter)
+
     const prospekList = await prisma.prospek.findMany({
+      where: baseFilter,
       orderBy: {
         createdAt: 'desc',
       },
@@ -23,6 +57,11 @@ export async function GET() {
 // POST - Create new prospek
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     console.log('Received prospek data:', body);
 
@@ -126,6 +165,7 @@ export async function POST(request: NextRequest) {
         kota: kota && kota.trim() !== '' ? kota : null,
         picLeads,
         keterangan: keterangan || null,
+        createdBy: session.user.name,
       },
     });
 

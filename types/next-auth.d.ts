@@ -11,6 +11,7 @@ declare module 'next-auth' {
       name: string
       companyId: number
       role?: string
+      kodeAds?: string[]
     }
   }
 
@@ -20,6 +21,7 @@ declare module 'next-auth' {
     name: string
     companyId: number
     role?: string
+    kodeAds?: string[]
     accessToken: string
     refreshToken: string
     accessTokenExpires: number
@@ -36,5 +38,6 @@ declare module 'next-auth/jwt' {
     email?: string
     name?: string
     role?: string
+    kodeAds?: string[]
   }
 }

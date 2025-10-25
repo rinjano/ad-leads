@@ -43,11 +43,11 @@ export const authOptions: NextAuthOptions = {
 
                     // Demo accounts for testing
                     const demoAccounts = [
-                        { email: 'admin@demo.com', password: 'demo123', name: 'Super Admin', role: 'super_admin' },
-                        { email: 'representative@demo.com', password: 'demo123', name: 'CS Representative', role: 'cs_representative' },
-                        { email: 'advertiser@demo.com', password: 'demo123', name: 'Advertiser', role: 'advertiser' },
-                        { email: 'support@demo.com', password: 'demo123', name: 'CS Support', role: 'cs_support' },
-                        { email: 'retention@demo.com', password: 'demo123', name: 'Retention Specialist', role: 'retention' },
+                        { email: 'admin@demo.com', password: 'demo123', name: 'Super Admin', role: 'super_admin', kodeAds: [] },
+                        { email: 'representative@demo.com', password: 'demo123', name: 'CS Representative', role: 'cs_representative', kodeAds: [] },
+                        { email: 'advertiser@demo.com', password: 'demo123', name: 'Advertiser', role: 'advertiser', kodeAds: ['ADS001', 'ADS002'] },
+                        { email: 'support@demo.com', password: 'demo123', name: 'CS Support', role: 'cs_support', kodeAds: [] },
+                        { email: 'retention@demo.com', password: 'demo123', name: 'Retention Specialist', role: 'retention', kodeAds: [] },
                     ]
 
                     // Check if it's a demo account
@@ -62,6 +62,7 @@ export const authOptions: NextAuthOptions = {
                             name: demoUser.name,
                             email: demoUser.email,
                             role: demoUser.role,
+                            kodeAds: demoUser.kodeAds,
                             accessToken: 'demo-token-' + Date.now(),
                             refreshToken: 'demo-refresh-' + Date.now(),
                             accessTokenExpires: Date.now() + 6 * 60 * 60 * 1000, // 6 hours
@@ -75,6 +76,13 @@ export const authOptions: NextAuthOptions = {
                         where: {
                             email: credentials.email,
                         },
+                        include: {
+                            userKodeAds: {
+                                include: {
+                                    kodeAds: true
+                                }
+                            }
+                        }
                     })
 
                     if (!user) {
@@ -110,6 +118,8 @@ export const authOptions: NextAuthOptions = {
                         name: user.name,
                         email: user.email,
                         companyId: user.companyId || 0,
+                        role: user.role,
+                        kodeAds: user.userKodeAds?.map(uka => uka.kodeAds.kode) || [],
                         accessToken: accessToken,
                         refreshToken: refreshToken,
                         accessTokenExpires: Date.now() + 6 * 60 * 60 * 1000, // 6 hours
@@ -133,6 +143,7 @@ export const authOptions: NextAuthOptions = {
                 token.name = user.name
                 token.email = user.email
                 token.role = user.role // Add role to token
+                token.kodeAds = user.kodeAds // Add kodeAds to token
             }
 
             if (trigger === 'update' && session) {
@@ -155,6 +166,7 @@ export const authOptions: NextAuthOptions = {
                 name: token.name as string,
                 companyId: token.companyId as unknown as number,
                 role: token.role as string,
+                kodeAds: token.kodeAds as string[],
             }
 
             return session

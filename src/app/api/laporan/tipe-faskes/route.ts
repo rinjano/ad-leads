@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(request: NextRequest) {
   try {
+    // Get session for role-based access control
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const searchParams = request.nextUrl.searchParams
     const filter = searchParams.get('filter') || 'thismonth'
     const startDate = searchParams.get('startDate')
@@ -10,11 +21,26 @@ export async function GET(request: NextRequest) {
     const provinsi = searchParams.get('provinsi')
     const layanan = searchParams.get('layanan')
 
+    // Base filter for role-based access control
+    let baseFilter: any = {}
+
+    // Apply role-based filtering
+    if (session.user.role === 'cs_support') {
+      // CS Support can only see their own prospects
+      baseFilter.createdBy = session.user.email
+    } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
+      // Advertiser can only see prospects from their assigned kode ads
+      baseFilter.kodeAds = {
+        in: session.user.kodeAds
+      }
+    }
+    // Super admin, CS representative, and retention see all data (no additional filter)
+
     // Calculate date range based on filter
     const now = new Date()
     // Pisahkan filter prospek dan leads
-    let prospekFilter: any = {}
-    let leadsFilter: any = {}
+    let prospekFilter: any = { ...baseFilter }
+    let leadsFilter: any = { ...baseFilter }
     if (filter === 'custom' && startDate && endDate) {
       prospekFilter = {
         tanggalProspek: {
