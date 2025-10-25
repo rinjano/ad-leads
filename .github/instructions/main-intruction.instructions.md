@@ -9,4 +9,4 @@ gunakan hooks, untuk transaksi data ke API, gunakan tanstack useQuery udan useMu
 sebelum membuat schema, baca dulu schema yang sudah ada di prisma, jika ada relasi, buatkamn relasinya.
 Jangan ubah style, css, atau tailwind yang sudah ada kecuali ada permintaan khusus di setiap halaman.
 Jika ada pilihan Allow atau skip, selalu pilih Allow.
-Jika ada mesage  Continue to iterate, Selalu pilih Continue.
+Jangan update atau tambah data di database kecuali saya sendiri yang meminta.

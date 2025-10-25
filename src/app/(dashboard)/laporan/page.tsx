@@ -261,7 +261,17 @@ export default function LaporanPage() {
       if (b.name === 'Organik') return 1
       return 0
     })
-    return sorted
+    // Normalize items to avoid runtime errors when fields are missing
+    return sorted.map(item => ({
+      name: item?.name ?? 'Unknown',
+      prospek: typeof item?.prospek === 'number' ? item.prospek : Number(item?.prospek) || 0,
+      leads: typeof item?.leads === 'number' ? item.leads : Number(item?.leads) || 0,
+      customer: typeof item?.customer === 'number' ? item.customer : Number(item?.customer) || 0,
+      totalNilaiLangganan: typeof item?.totalNilaiLangganan === 'number' ? item.totalNilaiLangganan : Number(item?.totalNilaiLangganan) || 0,
+      ctr: typeof item?.ctr === 'number' ? item.ctr : Number(item?.ctr) || 0,
+      // carry-through any other properties safely
+      ...item,
+    }))
   }, [sumberLeadsData])
 
   // Data organik individual untuk accordion, ambil dari server agar konsisten
@@ -2160,10 +2170,10 @@ export default function LaporanPage() {
                   <div className="mt-6 pt-4 border-t border-slate-200">
                     <div className="text-center">
                       <p className="text-sm text-slate-600">
-                        Rata-rata CTR: <span className="font-bold text-purple-600">{(csData.reduce((sum, cs) => sum + cs.ctr, 0) / csData.length).toFixed(1)}%</span>
+                        Rata-rata CTR: <span className="font-bold text-purple-600">{(csData && csData.length > 0 ? (csData.reduce((sum, cs) => sum + (cs.ctr || 0), 0) / csData.length).toFixed(1) : '0.0')}%</span>
                       </p>
                       <p className="text-sm text-slate-600 mt-1">
-                        Top Performer: <span className="font-bold text-blue-600">{csData[0].name}</span> ({csData[0].ctr}%)
+                        Top Performer: <span className="font-bold text-blue-600">{csData?.[0]?.name ?? '-'}</span> ({csData?.[0]?.ctr ?? 0}%)
                       </p>
                     </div>
                   </div>

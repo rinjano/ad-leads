@@ -1312,8 +1312,11 @@ export default function DataProspekPage() {
     setIsConverting(true);
     
     try {
-      // Validasi status - hanya "Leads" yang bisa dikonversi
-      if (prospectToConvert && prospectToConvert.leadStatus !== "Leads") {
+      // Validasi status - hanya "Leads" yang bisa dikonversi ke Customer baru
+      // Untuk Customer existing, izinkan penambahan layanan tanpa validasi status
+      const isExistingCustomer = prospectToConvert && prospectToConvert.leadStatus === "Customer";
+      
+      if (prospectToConvert && prospectToConvert.leadStatus !== "Leads" && !isExistingCustomer) {
         showNotification('Konversi hanya dapat dilakukan untuk prospek dengan status "Leads"', "error");
         closeConversionFormModal();
         return;
@@ -1354,35 +1357,42 @@ export default function DataProspekPage() {
         // Save to database
         await createKonversiMutation.mutateAsync(konversiData);
         
-        // Update prospek status to "Customer"
-        await updateProspekMutation.mutateAsync({
-          id: prospectToConvert.id,
-          data: {
-            tanggalProspek: prospectToConvert.prospectDate,
-            sumberLeads: prospectToConvert.leadSource,
-            kodeAds: prospectToConvert.adsCode || '',
-            idAds: prospectToConvert.adsId || '',
-            namaProspek: prospectToConvert.prospectName,
-            noWhatsApp: prospectToConvert.whatsappNumber,
-            email: prospectToConvert.email || '',
-            statusLeads: "Customer",  // Changed status
-            bukanLeads: '',  // Clear bukanLeads when converting to Customer
-            keteranganBukanLeads: '',  // Clear keteranganBukanLeads
-            layananAssist: prospectToConvert.assistService || '',
-            namaFaskes: prospectToConvert.faskesName || '',
-            tipeFaskes: prospectToConvert.faskesType || '',
-            provinsi: prospectToConvert.faskesProvinsi || '',
-            kota: prospectToConvert.faskesKota || '',
-            picLeads: prospectToConvert.picLead,
-            keterangan: prospectToConvert.description || ''
-          }
-        });
+        // Update prospek status to "Customer" only if converting from Leads
+        if (!isExistingCustomer) {
+          await updateProspekMutation.mutateAsync({
+            id: prospectToConvert.id,
+            data: {
+              tanggalProspek: prospectToConvert.prospectDate,
+              sumberLeads: prospectToConvert.leadSource,
+              kodeAds: prospectToConvert.adsCode || '',
+              idAds: prospectToConvert.adsId || '',
+              namaProspek: prospectToConvert.prospectName,
+              noWhatsApp: prospectToConvert.whatsappNumber,
+              email: prospectToConvert.email || '',
+              statusLeads: "Customer",  // Changed status
+              bukanLeads: '',  // Clear bukanLeads when converting to Customer
+              keteranganBukanLeads: '',  // Clear keteranganBukanLeads
+              layananAssist: prospectToConvert.assistService || '',
+              namaFaskes: prospectToConvert.faskesName || '',
+              tipeFaskes: prospectToConvert.faskesType || '',
+              provinsi: prospectToConvert.faskesProvinsi || '',
+              kota: prospectToConvert.faskesKota || '',
+              picLeads: prospectToConvert.picLead,
+              keterangan: prospectToConvert.description || ''
+            }
+          });
+        }
         
         // Close conversion form modal
         closeConversionFormModal();
         const itemCount = conversionForm.serviceProductItems.length;
         const itemText = itemCount === 1 ? 'layanan' : 'layanan';
-        showNotification(`Data berhasil dikonversi menjadi Customer! ${itemCount} ${itemText} dan produk telah tersimpan.`, "success");
+        showNotification(
+          isExistingCustomer 
+            ? `Berhasil menambahkan ${itemCount} ${itemText} dan produk baru ke customer existing!` 
+            : `Data berhasil dikonversi menjadi Customer! ${itemCount} ${itemText} dan produk telah tersimpan.`, 
+          "success"
+        );
       }
     } catch (error) {
       console.error('Error creating konversi:', error);
