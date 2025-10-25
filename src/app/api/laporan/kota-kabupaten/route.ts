@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getLaporanDateFilter } from '@/lib/laporan-date-filter'
 import { getServerSession } from 'next-auth/next'
 import { authOptions } from '@/auth'
 
@@ -20,115 +21,21 @@ export async function GET(request: NextRequest) {
     // Build base filter for role-based access
     let baseFilter: any = {}
     if (session.user.role === 'cs_support') {
-      baseFilter.createdBy = session.user.id
+      baseFilter.picLeads = session.user.name
     } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
       baseFilter.kodeAdsId = { in: session.user.kodeAds }
     }
 
-    // Calculate date range based on filter
-    const now = new Date()
-    // Pisahkan filter prospek dan leads
-    let prospekFilter: any = {}
-    let leadsFilter: any = {}
-    if (filter === 'custom' && startDate && endDate) {
-      prospekFilter = {
-        tanggalProspek: {
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      }
-      leadsFilter = {
-        tanggalJadiLeads: {
-          not: null,
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      }
-    } else {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      switch (filter) {
-        case 'today':
-          prospekFilter = {
-            tanggalProspek: {
-              gte: today
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: today
-            }
-          }
-          break
-        case 'yesterday': {
-          const yesterday = new Date(today)
-          yesterday.setDate(today.getDate() - 1)
-          prospekFilter = {
-            tanggalProspek: {
-              gte: yesterday,
-              lt: today
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: yesterday,
-              lt: today
-            }
-          }
-          break;
-        }
-        case 'thisweek': {
-          const startOfWeek = new Date(today)
-          startOfWeek.setDate(today.getDate() - today.getDay())
-          prospekFilter = {
-            tanggalProspek: {
-              gte: startOfWeek
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: startOfWeek
-            }
-          }
-          break;
-        }
-        case 'thismonth': {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          prospekFilter = {
-            tanggalProspek: {
-              gte: startOfMonth
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: startOfMonth
-            }
-          }
-          break;
-        }
-        case 'lastmonth': {
-          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          prospekFilter = {
-            tanggalProspek: {
-              gte: startOfLastMonth,
-              lte: endOfLastMonth
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: startOfLastMonth,
-              lte: endOfLastMonth
-            }
-          }
-          break;
-        }
-      }
-    }
+    // Gunakan utility filter yang konsisten
+    const now = new Date();
+    const prospekFilter = {
+      ...baseFilter,
+      ...getLaporanDateFilter({ type: 'prospek', periode: filter, startDate, endDate, now })
+    };
+    const leadsFilter = {
+      ...baseFilter,
+      ...getLaporanDateFilter({ type: 'leads', periode: filter, startDate, endDate, now })
+    };
 
     // Build where clause for prospek and leads
     const prospekWhere: any = { ...prospekFilter, ...baseFilter }

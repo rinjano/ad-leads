@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/auth'
 import { prisma } from '@/lib/prisma'
+import { getLaporanDateFilter } from '@/lib/laporan-date-filter'
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,134 +20,26 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
 
-    // Base filter for role-based access control
+    // Base filter for role-based access control (KONSISTEN)
     let baseFilter: any = {}
-
-    // Apply role-based filtering
     if (session.user.role === 'cs_support') {
-      // CS Support can only see their own prospects
-      baseFilter.createdBy = session.user.email
+      // CS Support hanya bisa lihat prospek yang dia pegang (picLeads)
+      baseFilter.picLeads = session.user.name
     } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
-      // Advertiser can only see prospects from their assigned kode ads
-      baseFilter.kodeAds = {
+      // Advertiser hanya bisa lihat prospek dari kodeAds yang dia pegang
+      baseFilter.kodeAdsId = {
         in: session.user.kodeAds
       }
     }
-    // Super admin, CS representative, and retention see all data (no additional filter)
+    // Super admin, CS representative, retention: lihat semua data
 
-    // Calculate date range based on filter
-    const now = new Date()
-    // Pisahkan filter prospek dan leads
-    let prospekFilter: any = { ...baseFilter }
-    let leadsFilter: any = { ...baseFilter }
-    if (filter === 'custom' && startDate && endDate) {
-      prospekFilter = {
-        tanggalProspek: {
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      }
-      leadsFilter = {
-        tanggalJadiLeads: {
-          not: null,
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      }
-    } else {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      switch (filter) {
-        case 'today':
-          prospekFilter = {
-            tanggalProspek: {
-              gte: today
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: today
-            }
-          }
-          break
-        case 'yesterday': {
-          const yesterday = new Date(today)
-          yesterday.setDate(today.getDate() - 1)
-          prospekFilter = {
-            tanggalProspek: {
-              gte: yesterday,
-              lt: today
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: yesterday,
-              lt: today
-            }
-          }
-          break;
-        }
-        case 'thisweek': {
-          const startOfWeek = new Date(today)
-          startOfWeek.setDate(today.getDate() - today.getDay())
-          prospekFilter = {
-            tanggalProspek: {
-              gte: startOfWeek
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: startOfWeek
-            }
-          }
-          break;
-        }
-        case 'thismonth': {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          prospekFilter = {
-            tanggalProspek: {
-              gte: startOfMonth
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: startOfMonth
-            }
-          }
-          break;
-        }
-        case 'lastmonth': {
-          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          prospekFilter = {
-            tanggalProspek: {
-              gte: startOfLastMonth,
-              lte: endOfLastMonth
-            }
-          }
-          leadsFilter = {
-            tanggalJadiLeads: {
-              not: null,
-              gte: startOfLastMonth,
-              lte: endOfLastMonth
-            }
-          }
-          break;
-        }
-      }
-    }
-
-    // Get total prospek count (berdasarkan tanggalProspek)
-    const totalProspek = await prisma.prospek.count({
-      where: prospekFilter
-    })
-    // Get total leads count (berdasarkan tanggalJadiLeads)
-    const totalLeads = await prisma.prospek.count({
-      where: leadsFilter
-    })
+    // Gunakan utility filter yang konsisten
+    const now = new Date();
+    // Jangan pernah masukkan filter waktu ke baseFilter
+    const prospekFilter = {
+      ...baseFilter,
+      ...getLaporanDateFilter({ type: 'prospek', periode: filter, startDate, endDate, now })
+    };
 
     // Get status leads ID for "Leads"
     const statusLeads = await prisma.statusLeads.findFirst({
@@ -154,12 +47,51 @@ export async function GET(request: NextRequest) {
     })
     const leadsStatusId = statusLeads?.id
 
-    // totalLeads sudah dihitung di atas (berdasarkan tanggalJadiLeads)
-    // Jika ingin tetap hitung statusLeadsId, tambahkan filter tambahan jika perlu
+    // Custom leads filter agar sama dengan dashboard
+    let leadsFilter: any = { ...baseFilter };
+    if (filter === 'custom' && startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      leadsFilter = {
+        ...baseFilter,
+        OR: [
+          {
+            tanggalProspek: {
+              gte: start,
+              lte: end,
+            },
+            OR: [
+              { tanggalJadiLeads: { not: null } },
+              { statusLeadsId: leadsStatusId }
+            ]
+          },
+          {
+            tanggalJadiLeads: {
+              gte: start,
+              lte: end,
+            }
+          }
+        ]
+      };
+    } else {
+      leadsFilter = {
+        ...baseFilter,
+        ...getLaporanDateFilter({ type: 'leads', periode: filter, startDate, endDate, now })
+      };
+    }
+
+    // Get total prospek count (berdasarkan tanggalProspek)
+    const totalProspek = await prisma.prospek.count({
+      where: prospekFilter
+    })
+    // Get total leads count (menggunakan filter baru)
+    const totalLeads = await prisma.prospek.count({
+      where: leadsFilter
+    })
 
     // Calculate CTR Leads percentage
-    const ctrLeads = totalLeads > 0 
-      ? 100
+    const ctrLeads = totalProspek > 0
+      ? parseFloat(((totalLeads / totalProspek) * 100).toFixed(1))
       : 0
 
     // Get bukan leads ID for "Spam"

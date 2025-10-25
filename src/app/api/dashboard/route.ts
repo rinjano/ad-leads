@@ -34,6 +34,15 @@ export async function GET(request: NextRequest) {
     }
     // Super admin, CS representative, and retention see all data (no additional filter)
 
+    // Get status "Leads" ID from database first
+    const statusLeads = await prisma.statusLeads.findFirst({
+      where: {
+        nama: 'Leads'
+      }
+    });
+
+    const leadsStatusId = statusLeads?.id;
+
     // Pisahkan filter prospek dan leads
     const now = new Date();
     let prospekFilter: any = { ...baseFilter };
@@ -119,17 +128,40 @@ export async function GET(request: NextRequest) {
       }
       case 'custom': {
         if (startDate && endDate) {
+          const start = new Date(startDate);
+          const end = new Date(endDate);
+
           prospekFilter = {
             tanggalProspek: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
+              gte: start,
+              lte: end,
             },
           };
+
+          // For leads in custom range: prospects that were either
+          // 1. Created in the date range AND have become leads, OR
+          // 2. Converted to leads in the date range
           leadsFilter = {
-            tanggalJadiLeads: {
-              gte: new Date(startDate),
-              lte: new Date(endDate),
-            },
+            OR: [
+              // Created in date range AND became leads
+              {
+                tanggalProspek: {
+                  gte: start,
+                  lte: end,
+                },
+                OR: [
+                  { tanggalJadiLeads: { not: null } },
+                  { statusLeadsId: leadsStatusId }
+                ]
+              },
+              // OR converted to leads in date range
+              {
+                tanggalJadiLeads: {
+                  gte: start,
+                  lte: end,
+                }
+              }
+            ]
           };
         }
         break;
@@ -143,22 +175,14 @@ export async function GET(request: NextRequest) {
         konversi_customer: true,
       },
     });
-    // Fetch all leads data (leads hari ini)
+
+    // Fetch all leads data (leads hari ini) - use leadsFilter which handles the date logic properly
     const allLeads = await prisma.prospek.findMany({
       where: leadsFilter,
       include: {
         konversi_customer: true,
       },
     });
-
-    // Get status "Leads" ID from database
-    const statusLeads = await prisma.statusLeads.findFirst({
-      where: {
-        nama: 'Leads'
-      }
-    });
-
-    const leadsStatusId = statusLeads?.id;
 
     // Calculate statistics
   // Untuk statistik prospek hari ini, totalProspek = jumlah prospek baru hari ini
@@ -259,15 +283,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Get top services (layanan)
-    const prospekWithLayanan = leadsStatusId ? await prisma.prospek.findMany({
+    const prospekWithLayanan = await prisma.prospek.findMany({
       where: {
-        ...leadsFilter,
-        statusLeadsId: leadsStatusId,
+        ...leadsFilter, // Use leads filter to get only leads
         layananAssistId: {
           not: null,
         },
       },
-    }) : [];
+    });
 
     const layananCount: { [key: string]: number } = {};
     prospekWithLayanan.forEach(p => {
@@ -296,8 +319,8 @@ export async function GET(request: NextRequest) {
 
     // Get top cities
     const cityCount: { [key: string]: number } = {};
-    allProspek.forEach(p => {
-      if (p.kota && leadsStatusId && p.statusLeadsId === leadsStatusId) {
+    allLeads.forEach(p => {
+      if (p.kota) {
         cityCount[p.kota] = (cityCount[p.kota] || 0) + 1;
       }
     });
@@ -316,8 +339,8 @@ export async function GET(request: NextRequest) {
 
     // Get top CS (picLeads)
     const csCount: { [key: string]: number } = {};
-    allProspek.forEach(p => {
-      if (p.picLeads && leadsStatusId && p.statusLeadsId === leadsStatusId) {
+    allLeads.forEach(p => {
+      if (p.picLeads) {
         csCount[p.picLeads] = (csCount[p.picLeads] || 0) + 1;
       }
     });
