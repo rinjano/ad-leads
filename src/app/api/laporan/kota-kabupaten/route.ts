@@ -22,8 +22,8 @@ export async function GET(request: NextRequest) {
     let baseFilter: any = {}
     if (session.user.role === 'cs_support') {
       baseFilter.picLeads = session.user.name
-    } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
-      baseFilter.kodeAdsId = { in: session.user.kodeAds }
+    // } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
+    //   baseFilter.kodeAdsId = { in: session.user.kodeAds }
     }
 
     // Gunakan utility filter yang konsisten

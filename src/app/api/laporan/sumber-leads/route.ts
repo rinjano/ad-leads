@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
     if (session.user.role === 'cs_support') {
       // CS Support hanya bisa lihat prospek yang dia pegang (picLeads)
       baseFilter.picLeads = session.user.name
-    } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
-      // Advertiser hanya bisa lihat prospek dari kodeAds yang dia pegang
-      baseFilter.kodeAdsId = {
-        in: session.user.kodeAds
-      }
+    // } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
+    //   // Advertiser hanya bisa lihat prospek dari kodeAds yang dia pegang
+    //   baseFilter.kodeAdsId = {
+    //     in: session.user.kodeAds
+    //   }
     }
     // Super admin, CS representative, retention: lihat semua data
 

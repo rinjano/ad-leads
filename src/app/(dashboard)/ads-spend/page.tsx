@@ -38,9 +38,11 @@ import {
   Shield,
   UsersRound,
   Receipt,
-  Loader2
+  Loader2,
+  Lock
 } from "lucide-react";
 import { useAdsSpend } from "@/hooks/useAdsSpend";
+import { useSession } from "next-auth/react";
 
 // Data bulan sebelumnya untuk perbandingan (hardcoded untuk demo)
 const previousMonthData = {
@@ -67,7 +69,22 @@ interface History {
 }
 
 export default function AdsSpendPage() {
-  // Filter waktu style laporan
+  const { data: session, status } = useSession();
+  const userRole = session?.user?.role;
+  const userKodeAds = session?.user?.kodeAds || [];
+
+  // Authorization helper functions
+  const canManageBudget = (kodeAds: string) => {
+    if (userRole === 'super_admin') return true;
+    if (userRole === 'advertiser') {
+      return userKodeAds.includes(kodeAds);
+    }
+    return false;
+  };
+
+  const canManageAllBudgets = () => {
+    return userRole === 'super_admin';
+  };
   const [dateRange, setDateRange] = useState('thismonth');
   const [showCustomDate, setShowCustomDate] = useState(false);
   const [customStartDate, setCustomStartDate] = useState('');
@@ -502,7 +519,43 @@ export default function AdsSpendPage() {
     "Juli", "Agustus", "September", "Oktober", "November", "Desember"
   ];
 
-  // Loading state
+  // Loading state for session
+  if (status === 'loading') {
+    return (
+      <div className="p-6 space-y-6">
+        <Card className="bg-white shadow-lg border-slate-200">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-slate-500">
+              <Loader2 className="h-12 w-12 animate-spin text-purple-600 mb-4" />
+              <p className="text-lg font-medium">Memverifikasi akses...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Unauthorized access
+  if (!session || !userRole) {
+    return (
+      <div className="p-6 space-y-6">
+        <Card className="bg-white shadow-lg border-slate-200">
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center text-red-500">
+              <Lock className="h-12 w-12 mb-4" />
+              <p className="text-lg font-medium mb-2">Akses Ditolak</p>
+              <p className="text-sm text-slate-600 text-center">
+                Anda tidak memiliki akses ke halaman ini.<br />
+                Silakan login dengan akun yang memiliki izin.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state for data
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
@@ -1197,22 +1250,54 @@ export default function AdsSpendPage() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleAddBudget(ads)}
-                            className="h-8 w-8 p-0 bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:border-green-300 transition-all duration-200 relative group"
-                            title="Tambah Budget"
+                            disabled={!canManageBudget(ads.kodeAds)}
+                            className={`h-8 w-8 p-0 transition-all duration-200 relative group ${
+                              canManageBudget(ads.kodeAds)
+                                ? 'bg-green-50 text-green-600 border-green-200 hover:bg-green-100 hover:border-green-300'
+                                : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                            }`}
+                            title={
+                              canManageBudget(ads.kodeAds)
+                                ? "Tambah Budget"
+                                : userRole === 'advertiser'
+                                  ? `Hanya bisa mengelola kode ads: ${userKodeAds.join(', ')}`
+                                  : "Tidak memiliki akses"
+                            }
                           >
                             <div className="relative">
-                              <Wallet className="h-4 w-4" />
-                              <PlusCircle className="h-2 w-2 absolute -top-1 -right-1 bg-green-50 rounded-full" />
+                              {canManageBudget(ads.kodeAds) ? (
+                                <>
+                                  <Wallet className="h-4 w-4" />
+                                  <PlusCircle className="h-2 w-2 absolute -top-1 -right-1 bg-green-50 rounded-full" />
+                                </>
+                              ) : (
+                                <Lock className="h-4 w-4" />
+                              )}
                             </div>
                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handleUpdateBudgetSpent(ads)}
-                            className="h-8 w-8 p-0 bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:border-red-300 transition-all duration-200"
-                            title="Edit Spending"
+                            disabled={!canManageBudget(ads.kodeAds)}
+                            className={`h-8 w-8 p-0 transition-all duration-200 ${
+                              canManageBudget(ads.kodeAds)
+                                ? 'bg-red-50 text-red-600 border-red-200 hover:bg-red-100 hover:border-red-300'
+                                : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
+                            }`}
+                            title={
+                              canManageBudget(ads.kodeAds)
+                                ? "Edit Spending"
+                                : userRole === 'advertiser'
+                                  ? `Hanya bisa mengelola kode ads: ${userKodeAds.join(', ')}`
+                                  : "Tidak memiliki akses"
+                            }
                           >
-                            <Calculator className="h-4 w-4" />
+                            {canManageBudget(ads.kodeAds) ? (
+                              <Calculator className="h-4 w-4" />
+                            ) : (
+                              <Lock className="h-4 w-4" />
+                            )}
                           </Button>
                           <Button
                             variant="outline"

@@ -23,21 +23,8 @@ export async function GET(request: NextRequest) {
     // Base filter for role-based access
     let baseFilter: any = {};
 
-    // Apply role-based filtering
-    if (userRole === 'advertiser' && userKodeAds.length > 0) {
-      // Advertiser can only see data from their assigned kode ads
-      const kodeAdsIds = await prisma.kodeAds.findMany({
-        where: {
-          kode: {
-            in: userKodeAds
-          }
-        },
-        select: { id: true }
-      });
-      baseFilter.kodeAdsId = {
-        in: kodeAdsIds.map(k => k.id)
-      };
-    }
+    // NOTE: Removed role-based filtering to show all kode ads
+    // All users can see all ads spend data, UI will handle action permissions
     // Super admin, CS support, CS representative, and retention see all data (no additional filter)
 
     // Calculate date range based on filter (using tanggalJadiLeads for leads)
@@ -213,14 +200,20 @@ export async function GET(request: NextRequest) {
       sl.nama.toLowerCase().includes('ads')
     );
 
-    // Get current periode (YYYY-MM format)
-    const currentPeriode = now.toISOString().slice(0, 7); // "2025-10"
+    // Calculate periode based on leads filter (same logic as /laporan)
+    let budgetPeriode: string | undefined;
+    if (leadsFilter.tanggalJadiLeads) {
+      if (leadsFilter.tanggalJadiLeads.gte) {
+        const startDate = leadsFilter.tanggalJadiLeads.gte;
+        budgetPeriode = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`;
+      }
+    }
 
-    // Get all ads budgets for current periode
+    // Get all ads budgets for the calculated periode
     const adsBudgets = await prisma.adsBudget.findMany({
-      where: {
-        periode: currentPeriode,
-      },
+      where: budgetPeriode ? {
+        periode: budgetPeriode,
+      } : {},
     });
 
     // Create a map for quick lookup

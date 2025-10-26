@@ -22,13 +22,17 @@ export async function GET(request: NextRequest) {
 
     // Base filter for role-based access control
     let baseFilter: any = {}
-    if (session.user.role === 'cs_support') {
-      baseFilter.picLeads = session.user.name
-    } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
-      baseFilter.kodeAdsId = {
-        in: session.user.kodeAds
-      }
-    }
+    // TEMPORARY: Skip role-based filtering for testing
+    // if (session.user.role === 'cs_support') {
+    //   baseFilter.picLeads = session.user.name
+    // } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
+    //   baseFilter.kodeAdsId = {
+    //     in: session.user.kodeAds
+    //   }
+    // }
+    console.log('Base filter:', baseFilter)
+    console.log('User role:', session.user.role)
+    console.log('User kodeAds:', session.user.kodeAds)
 
     // Apply date filtering
     const now = new Date()

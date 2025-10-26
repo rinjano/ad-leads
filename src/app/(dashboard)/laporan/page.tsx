@@ -152,6 +152,9 @@ export default function LaporanPage() {
     true // bypassDateFilter
   )
 
+  // Fetch layanan master data for filter options
+  const { data: layananMasterData, isLoading: layananMasterLoading } = useLayananMaster()
+
   // Process sumber leads data from API with colors
   const processedKodeAdsData = useMemo(() => {
     const colorClasses = ['blue', 'green', 'purple', 'orange', 'indigo', 'emerald', 'pink', 'teal']
@@ -357,7 +360,7 @@ export default function LaporanPage() {
 
     if (selectedLayanan) {
       yearFiltered = yearFiltered.filter(item => 
-        item.layanan && item.layanan.split(', ').includes(selectedLayanan)
+        item.layanan && item.layanan.trim() !== '' && item.layanan.split(', ').includes(selectedLayanan)
       )
     }
     
@@ -423,14 +426,6 @@ export default function LaporanPage() {
   const uniqueLeadSources = useMemo(() => {
     if (!monthlyAdsSpendData) return []
     return [...new Set(monthlyAdsSpendData.map(item => item.sumberLeads).filter(source => source && source !== 'Unknown'))]
-  }, [monthlyAdsSpendData])
-
-  const uniqueLayanan = useMemo(() => {
-    if (!monthlyAdsSpendData) return []
-    const allLayanan = monthlyAdsSpendData.flatMap(item => 
-      item.layanan ? item.layanan.split(', ').filter(l => l.trim()) : []
-    )
-    return [...new Set(allLayanan)].filter(layanan => layanan && layanan !== 'Unknown')
   }, [monthlyAdsSpendData])
 
   // Summary stats dari database atau default values
@@ -3019,8 +3014,8 @@ export default function LaporanPage() {
                         className="w-full px-3 py-2 border border-slate-300 rounded-lg bg-white text-sm focus:border-blue-500 focus:ring-blue-500"
                       >
                         <option value="">Semua Layanan</option>
-                        {uniqueLayanan.map((layanan) => (
-                          <option key={layanan} value={layanan}>{layanan}</option>
+                        {layananMasterData?.data?.map((layanan) => (
+                          <option key={layanan.id} value={layanan.nama}>{layanan.nama}</option>
                         ))}
                       </select>
                     </div>

@@ -1,93 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getServerSession } from 'next-auth/next'
+import { getServerSession } from 'next-auth'
 import { authOptions } from '@/auth'
+import { prisma } from '@/lib/prisma'
+import { getLaporanDateFilter } from '@/lib/laporan-date-filter'
 
 export async function GET(request: NextRequest) {
   try {
+    // Get session for role-based access control
     const session = await getServerSession(authOptions)
-    if (!session) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
     }
 
-  const searchParams = request.nextUrl.searchParams
-  const filter = searchParams.get('filter') || 'thismonth'
-  const startDate = searchParams.get('startDate')
-  const endDate = searchParams.get('endDate')
-  const layananId = searchParams.get('layananId')
+    const searchParams = request.nextUrl.searchParams
+    const filter = searchParams.get('filter') || 'thismonth'
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
+    const layananId = searchParams.get('layananId')
 
-    // Build base filter for role-based access
+    // Base filter for role-based access control
     let baseFilter: any = {}
-    if (session.user.role === 'cs_support') {
-      baseFilter.picLeads = session.user.name
-    } else if (session.user.role === 'advertiser' && session.user.kodeAds) {
-      baseFilter.kodeAdsId = { in: session.user.kodeAds }
-    }
+    // TEMPORARY: Skip role-based filtering for testing
+    // if (session.user.role === 'cs_support') {
+    //   baseFilter.picLeads = session.user.name
+    // } else if (session.user.role === 'advertiser' && session.user.kodeAds?.length > 0) {
+    //   baseFilter.kodeAdsId = {
+    //     in: session.user.kodeAds
+    //   }
+    // }
+    console.log('Base filter:', baseFilter)
+    console.log('User role:', session.user.role)
+    console.log('User kodeAds:', session.user.kodeAds)
 
-    // Calculate date range based on filter
+    // Apply date filtering
     const now = new Date()
-    let dateFilter: any = {}
-
-    if (filter === 'custom' && startDate && endDate) {
-      dateFilter = {
-        tanggalProspek: {
-          gte: new Date(startDate),
-          lte: new Date(endDate)
-        }
-      }
-    } else {
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-      switch (filter) {
-        case 'today':
-          dateFilter = {
-            tanggalProspek: {
-              gte: today
-            }
-          }
-          break
-        case 'yesterday': {
-          const yesterday = new Date(today)
-          yesterday.setDate(today.getDate() - 1)
-          dateFilter = {
-            tanggalProspek: {
-              gte: yesterday,
-              lt: today
-            }
-          }
-          break
-        }
-        case 'thisweek': {
-          const startOfWeek = new Date(today)
-          startOfWeek.setDate(today.getDate() - today.getDay())
-          dateFilter = {
-            tanggalProspek: {
-              gte: startOfWeek
-            }
-          }
-          break
-        }
-        case 'thismonth': {
-          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
-          dateFilter = {
-            tanggalProspek: {
-              gte: startOfMonth
-            }
-          }
-          break
-        }
-        case 'lastmonth': {
-          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-          const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-          dateFilter = {
-            tanggalProspek: {
-              gte: startOfLastMonth,
-              lte: endOfLastMonth
-            }
-          }
-          break
-        }
-      }
-    }
+    const dateFilter = getLaporanDateFilter({ 
+      type: 'prospek', 
+      periode: filter, 
+      startDate, 
+      endDate, 
+      now 
+    })
 
     // Get all prospects with their CS representatives and conversion data
     // Jika filter layananId diisi, filter berdasarkan layanan yang diminati prospek
@@ -190,11 +146,11 @@ export async function GET(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error fetching CS performance data:', error)
+    console.error('Error fetching summary data:', error)
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch CS performance data',
+      { 
+        success: false, 
+        error: 'Failed to fetch summary data',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
       { status: 500 }
