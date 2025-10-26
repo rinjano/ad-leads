@@ -174,7 +174,7 @@ export function UserTab() {
     const roleLabels: Record<string, string> = {
       super_admin: 'Super Admin',
       user: 'User',
-      cs_representative: 'CS Representative',
+      cs_representative: 'Sales Representative',
       advertiser: 'Advertiser',
       cs_support: 'CS Support',
       retention: 'Retention',
@@ -420,7 +420,7 @@ export function UserTab() {
                   <option value="">Pilih Role</option>
                   <option value="super_admin">Super Admin</option>
                   <option value="cs_support">CS Support</option>
-                  <option value="cs_representative">CS Representative</option>
+                  <option value="cs_representative">Sales Representative</option>
                   <option value="advertiser">Advertiser</option>
                   <option value="retention">Retention</option>
                 </select>
@@ -558,7 +558,7 @@ export function UserTab() {
                   <option value="">Pilih Role</option>
                   <option value="super_admin">Super Admin</option>
                   <option value="cs_support">CS Support</option>
-                  <option value="cs_representative">CS Representative</option>
+                  <option value="cs_representative">Sales Representative</option>
                   <option value="advertiser">Advertiser</option>
                   <option value="retention">Retention</option>
                 </select>
