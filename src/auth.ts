@@ -45,7 +45,7 @@ export const authOptions: NextAuthOptions = {
                     const demoAccounts = [
                         { email: 'admin@demo.com', password: 'demo123', name: 'Super Admin', role: 'super_admin', kodeAds: [] },
                         { email: 'representative@demo.com', password: 'demo123', name: 'CS Representative', role: 'cs_representative', kodeAds: [] },
-                        { email: 'advertiser@demo.com', password: 'demo123', name: 'Advertiser', role: 'advertiser', kodeAds: ['ADS001', 'ADS002'] },
+                        { email: 'advertiser@demo.com', password: 'demo123', name: 'Advertiser', role: 'advertiser', kodeAds: ['202', '204'] },
                         { email: 'support@demo.com', password: 'demo123', name: 'CS Support', role: 'cs_support', kodeAds: [] },
                         { email: 'retention@demo.com', password: 'demo123', name: 'Retention Specialist', role: 'retention', kodeAds: [] },
                     ]

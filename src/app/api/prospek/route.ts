@@ -21,21 +21,8 @@ export async function GET() {
     if (userRole === 'cs_support') {
       // CS Support can only see prospects they created
       baseFilter.createdBy = session.user.name;
-    } else if (userRole === 'advertiser' && userKodeAds.length > 0) {
-      // Advertiser can only see prospects from their assigned kode ads
-      const kodeAdsIds = await prisma.kodeAds.findMany({
-        where: {
-          kode: {
-            in: userKodeAds
-          }
-        },
-        select: { id: true }
-      });
-      baseFilter.kodeAdsId = {
-        in: kodeAdsIds.map(k => k.id)
-      };
     }
-    // Super admin, CS representative, and retention see all data (no additional filter)
+    // Advertiser, Super admin, CS representative, and retention see all data (no additional filter)
 
     const prospekList = await prisma.prospek.findMany({
       where: baseFilter,
