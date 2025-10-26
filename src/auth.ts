@@ -1,5 +1,5 @@
-import { NextAuthOptions } from 'next-auth'
-import CredentialsProvider from 'next-auth/providers/credentials'
+import NextAuth from 'next-auth'
+import Credentials from 'next-auth/providers/credentials'
 import { prisma } from '@/lib/prisma'
 import { verifyPassword, generateToken } from '@/lib/auth-utils'
 
@@ -10,11 +10,11 @@ type PayloadProps =
       }
     | undefined
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
     debug: true,
     logger: {
-        error(code, metadata) {
-            console.error('NextAuth Error:', code, metadata)
+        error(error) {
+            console.error('NextAuth Error:', error)
         },
         warn(code) {
             console.warn('NextAuth Warning:', code)
@@ -25,7 +25,7 @@ export const authOptions: NextAuthOptions = {
         }
     },
     providers: [
-        CredentialsProvider({
+        Credentials({
             name: 'loginByCredential',
             id: 'credentials',
             credentials: {
@@ -33,7 +33,7 @@ export const authOptions: NextAuthOptions = {
                 password: { label: 'Password', type: 'password' },
             },
             authorize: async (credentials: PayloadProps) => {
-                
+
                 try {
 
                     console.log('email', credentials)
@@ -133,8 +133,8 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user, account, trigger, session }) {        
-            
+        async jwt({ token, user, account, trigger, session }) {
+
             if (user && account) {
                 token.id = user.id
                 token.accessToken = user.accessToken
@@ -154,35 +154,22 @@ export const authOptions: NextAuthOptions = {
             return token
         },
         async session({ session, token }) {
-            
             if (token.accessToken) {
                 session.accessToken = token.accessToken as string
                 session.refreshToken = token.refreshToken as string
             }
 
-            session.user = {
-                id: token.id as unknown as string,
-                email: token.email as string,
-                name: token.name as string,
-                companyId: token.companyId as unknown as number,
-                role: token.role as string,
-                kodeAds: token.kodeAds as string[],
-            }
+            // Properly assign user properties to session
+            session.user.id = token.id as string
+            session.user.email = token.email as string
+            session.user.name = token.name as string
+            session.user.companyId = token.companyId as number
+            session.user.role = token.role as string
+            session.user.kodeAds = token.kodeAds as string[]
 
             return session
         }
     },
-    pages: {
-        signIn: '/login',
-        error: '/login',
-    },
-    secret: process.env.JWT_SECRET,
-    session: {
-        strategy: 'jwt',
-        maxAge: 6 * 60 * 60, //6 hours, if user still have transaction, we can extend the session
-        // maxAge: 1 * 60 //6 hours, if user still have transaction, we can extend the session
-    },
-    jwt: {
-        secret: process.env.JWT_SECRET,
-    },
-}
+    basePath: '/api/auth',
+    secret: process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET,
+})

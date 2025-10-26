@@ -14,7 +14,8 @@ import { useSumberLeads } from "@/hooks/useSumberLeads";
 import { useTipeFaskes } from "@/hooks/useTipeFaskes";
 import { useBukanLeads } from "@/hooks/useBukanLeads";
 import { useProduk } from "@/hooks/useProduk";
-import { useCreateKonversi, useUpdateKonversi, useDeleteKonversi, useKonversiByProspekId } from "@/hooks/useKonversi";
+import { useAuth } from "@/contexts/AuthContext";
+import { useKonversiByProspekId, useCreateKonversi, useUpdateKonversi, useDeleteKonversi } from "@/hooks/useKonversi";
 
 import { 
   Search, UserPlus, Eye, Edit3, Trash2, ChevronLeft, ChevronRight,
@@ -461,6 +462,7 @@ const dummyAdsCodes = [
 
 export default function DataProspekPage() {
   const router = useRouter();
+  const { appUser } = useAuth(); // Get user role information
   const [searchTerm, setSearchTerm] = useState("");
   const [itemsPerPage, setItemsPerPage] = useState("10");
   const [currentPage, setCurrentPage] = useState(1);
@@ -721,6 +723,11 @@ export default function DataProspekPage() {
 
   // Filter data berdasarkan search term dan filters
   const filteredProspects = prospects.filter(prospect => {
+    // Role-based access control: cs_representative can only see "Leads" and "Customer" status
+    const isSalesRepresentative = appUser?.role === 'cs_representative';
+    const roleBasedStatusMatch = !isSalesRepresentative || 
+      (prospect.leadStatus === "Leads" || prospect.leadStatus === "Customer");
+
     // Search filter
     const searchMatch = prospect.prospectName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       prospect.faskesName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -759,7 +766,7 @@ export default function DataProspekPage() {
       }
     }
 
-    return searchMatch && kodeAdsMatch && sumberLeadsMatch && layananAssistMatch && statusLeadsMatch && dateMatch;
+    return roleBasedStatusMatch && searchMatch && kodeAdsMatch && sumberLeadsMatch && layananAssistMatch && statusLeadsMatch && dateMatch;
   });
 
   // Pagination logic
@@ -2096,15 +2103,17 @@ value={filters.customEndDate}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => router.push(`/edit-prospek/${prospect.id}`)}
-                            className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600 rounded-lg"
-                            title="Edit Prospek"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </Button>
+                          {appUser?.role !== 'cs_representative' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => router.push(`/edit-prospek/${prospect.id}`)}
+                              className="h-8 w-8 p-0 hover:bg-yellow-50 hover:text-yellow-600 rounded-lg"
+                              title="Edit Prospek"
+                            >
+                              <Edit3 className="h-4 w-4" />
+                            </Button>
+                          )}
                           {/* Tombol Konversi ke Customer - hanya aktif untuk status "Leads" */}
                           {(() => {
                             const isLeadsStatus = prospect.leadStatus === "Leads";
@@ -2146,15 +2155,17 @@ value={filters.customEndDate}
                               </Button>
                             );
                           })()}
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => openDeleteModal(prospect)}
-                            className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg"
-                            title="Hapus Prospek"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {appUser?.role !== 'cs_representative' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={() => openDeleteModal(prospect)}
+                              className="h-8 w-8 p-0 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg"
+                              title="Hapus Prospek"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

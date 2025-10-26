@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/auth'
+import { auth } from '@/auth'
 import { prisma } from '@/lib/prisma'
 import { getLaporanDateFilter } from '@/lib/laporan-date-filter'
 
 export async function GET(request: NextRequest) {
   try {
     // Get session for role-based access control
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
