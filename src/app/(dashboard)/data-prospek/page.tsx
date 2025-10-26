@@ -1059,7 +1059,9 @@ export default function DataProspekPage() {
           
           allSubscriptions.push({
             id: item.id,
+            serviceId: item.layananId,
             serviceName: item.layanan?.nama || '-',
+            productId: item.produkId,
             productName: item.produk?.nama || '-',
             transactionValue: item.nilaiTransaksi || 0,
             subscriptionDuration: item.durasiLangganan,
@@ -1171,9 +1173,6 @@ export default function DataProspekPage() {
         return;
       }
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
       // Calculate end date
       const startDate = new Date(renewalForm.startDate);
       const endDate = new Date(startDate);
@@ -1185,23 +1184,25 @@ export default function DataProspekPage() {
         endDate.setFullYear(endDate.getFullYear() + duration);
       }
 
-      // Create new renewal subscription
-      const renewalSubscription = {
-        id: Date.now(),
-        serviceId: selectedSubscription.serviceId,
-        serviceName: selectedSubscription.serviceName,
-        productId: selectedSubscription.productId,
-        productName: selectedSubscription.productName,
-        transactionValue: parseFloat(numericValue),
-        subscriptionDuration: duration,
-        durationType: renewalForm.durationType,
-        conversionDate: new Date().toISOString().split('T')[0],
-        startDate: renewalForm.startDate,
-        endDate: endDate.toISOString().split('T')[0],
-        status: 'active',
-        isRenewal: true,
-        originalSubscriptionId: selectedSubscription.id
+      // Create renewal konversi data
+      const renewalData = {
+        prospekId: selectedCustomer.id,
+        tanggalKonversi: renewalForm.startDate, // Use the start date as conversion date for renewal
+        totalNilaiTransaksi: parseFloat(numericValue),
+        keterangan: `Perpanjangan langganan ${selectedSubscription.serviceName} - ${selectedSubscription.productName}`,
+        items: [
+          {
+            layananId: parseInt(selectedSubscription.serviceId),
+            produkId: parseInt(selectedSubscription.productId),
+            nilaiTransaksi: parseFloat(numericValue),
+            durasiLangganan: duration,
+            tipeDurasi: renewalForm.durationType,
+          }
+        ],
       };
+
+      // Save renewal to database using the create konversi mutation
+      await createKonversiMutation.mutateAsync(renewalData);
 
       // Close modal and show success
       setShowRenewalModal(false);
@@ -1212,20 +1213,13 @@ export default function DataProspekPage() {
 
       // Refresh customer detail if open
       if (showCustomerDetailModal) {
-        const updatedProspects = prospects.map(prospect =>
-          prospect.id === selectedCustomer.id
-            ? {
-                ...prospect,
-                conversionData: [...(prospect.conversionData || []), renewalSubscription]
-              }
-            : prospect
-        );
-        const updatedCustomer = updatedProspects.find(p => p.id === selectedCustomer.id);
-        setSelectedCustomer(updatedCustomer);
+        // The query will automatically refresh due to the mutation's onSuccess callback
+        // No need to manually update local state
       }
 
     } catch (error) {
-      showNotification("Terjadi kesalahan saat memproses perpanjangan langganan.", "error");
+      console.error('Error processing renewal:', error);
+      showNotification(error.message || "Terjadi kesalahan saat memproses perpanjangan langganan.", "error");
     } finally {
       setIsProcessingRenewal(false);
     }
@@ -1345,10 +1339,16 @@ export default function DataProspekPage() {
         // Calculate total transaction value
         const totalNilaiTransaksi = items.reduce((sum, item) => sum + item.nilaiTransaksi, 0);
 
+        // Use the earliest start date from the form items as tanggalKonversi
+        const earliestStartDate = conversionForm.serviceProductItems
+          .map(item => item.startDate)
+          .filter(date => date && date.trim() !== '')
+          .sort()[0] || new Date().toISOString().split('T')[0];
+
         // Create konversi customer data
         const konversiData = {
           prospekId: prospectToConvert.id,
-          tanggalKonversi: new Date().toISOString().split('T')[0],
+          tanggalKonversi: earliestStartDate,
           totalNilaiTransaksi: totalNilaiTransaksi,
           keterangan: `Konversi dari prospek: ${prospectToConvert.prospectName}`,
           items: items,
@@ -3400,7 +3400,9 @@ value={filters.customEndDate}
                                           size="sm"
                                           onClick={() => openRenewalModal(selectedCustomer, {
                                             id: item.id,
+                                            serviceId: item.layananId,
                                             serviceName: item.layanan?.nama,
+                                            productId: item.produkId,
                                             productName: item.produk?.nama,
                                             transactionValue: item.nilaiTransaksi,
                                             subscriptionDuration: item.durasiLangganan,
