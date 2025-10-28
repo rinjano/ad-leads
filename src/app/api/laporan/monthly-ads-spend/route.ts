@@ -24,84 +24,71 @@ export async function GET(request: NextRequest) {
     //   baseFilter.kodeAdsId = { in: session.user.kodeAds }
     // }
 
-    // Build date filter for leads (tanggalJadiLeads) - sama seperti /ads-spend
-    let leadsDateFilter: any = {}
+    // Compute a canonical start/end for the requested dateRange (used for both
+    // tanggalProspek and tanggalJadiLeads filtering). We use an exclusive end
+    // (endDate is the first day after the range) which simplifies comparisons.
+    let rangeStart: Date | undefined
+    let rangeEnd: Date | undefined
     if (!bypassDateFilter) {
       const now = new Date()
-
       if (dateRange === 'custom' && customStartDate && customEndDate) {
-        leadsDateFilter = {
-          tanggalJadiLeads: {
-            gte: new Date(customStartDate),
-            lte: new Date(customEndDate)
-          }
-        }
+        rangeStart = new Date(customStartDate)
+        // make end exclusive by adding one day to customEndDate
+        rangeEnd = new Date(new Date(customEndDate).getTime() + 24 * 60 * 60 * 1000)
       } else {
         switch (dateRange) {
           case 'today':
-            leadsDateFilter = {
-              tanggalJadiLeads: {
-                gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
-                lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
-              }
-            }
+            rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+            rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
             break
           case 'yesterday':
             const yesterday = new Date(now)
             yesterday.setDate(yesterday.getDate() - 1)
-            leadsDateFilter = {
-              tanggalJadiLeads: {
-                gte: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate()),
-                lt: new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate() + 1)
-              }
-            }
+            rangeStart = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate())
+            rangeEnd = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate() + 1)
             break
           case 'thisweek':
             const startOfWeek = new Date(now)
             startOfWeek.setDate(now.getDate() - now.getDay())
-            leadsDateFilter = {
-              tanggalJadiLeads: {
-                gte: startOfWeek,
-                lte: now
-              }
-            }
+            rangeStart = new Date(startOfWeek.getFullYear(), startOfWeek.getMonth(), startOfWeek.getDate())
+            rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
             break
           case 'thismonth':
-            leadsDateFilter = {
-              tanggalJadiLeads: {
-                gte: new Date(now.getFullYear(), now.getMonth(), 1),
-                lte: now
-              }
-            }
+            rangeStart = new Date(now.getFullYear(), now.getMonth(), 1)
+            rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
             break
           case 'lastmonth':
             const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0)
-            leadsDateFilter = {
-              tanggalJadiLeads: {
-                gte: lastMonth,
-                lte: endOfLastMonth
-              }
-            }
+            rangeStart = new Date(lastMonth.getFullYear(), lastMonth.getMonth(), 1)
+            rangeEnd = new Date(now.getFullYear(), now.getMonth(), 1)
             break
           default:
-            leadsDateFilter = {
-              tanggalJadiLeads: {
-                gte: new Date(now.getFullYear(), now.getMonth(), 1),
-                lte: now
-              }
-            }
+            rangeStart = new Date(now.getFullYear(), now.getMonth(), 1)
+            rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
         }
       }
     }
 
-    // Get all leads with related data - sama seperti /ads-spend
+    // Get prospects/leads with related data. Previously the query applied the
+    // date filter only to `tanggalJadiLeads`, which makes the `prospek` count
+    // effectively equal to leads (only counting rows with tanggalJadiLeads).
+    // We want `prospek` to count records by `tanggalProspek` (prospect date)
+    // while `leads` stays counted by `tanggalJadiLeads` (lead conversion date).
+    // To support both in a single dataset we fetch rows that have kodeAdsId and
+    // whose `tanggalProspek` OR `tanggalJadiLeads` falls inside the requested
+    // range. When bypassDateFilter is true we fetch all records with a kode.
+    const dateFilterClause: any = {}
+    if (!bypassDateFilter && rangeStart && rangeEnd) {
+      dateFilterClause.OR = [
+        { tanggalProspek: { gte: rangeStart, lt: rangeEnd } },
+        { tanggalJadiLeads: { gte: rangeStart, lt: rangeEnd } }
+      ]
+    }
+
     const allLeads = await prisma.prospek.findMany({
       where: {
-        ...leadsDateFilter,
-        kodeAdsId: {
-          not: null
-        },
+        kodeAdsId: { not: null },
+        ...dateFilterClause,
         ...baseFilter
       },
       include: {
@@ -146,8 +133,12 @@ export async function GET(request: NextRequest) {
       // Check if sumber leads is an ads channel - sama seperti /ads-spend
       if (!adsChannels.some(sl => sl.id === prospek.sumberLeadsId)) return
 
-      const month = new Date(prospek.tanggalJadiLeads!).toLocaleDateString('id-ID', { month: 'long' })
-      const year = new Date(prospek.tanggalJadiLeads!).getFullYear()
+      // Use tanggalJadiLeads for grouping month/year when present; otherwise
+      // fall back to tanggalProspek so unconverted prospects are grouped in the
+      // month they were created.
+      const dateForGrouping = prospek.tanggalJadiLeads || prospek.tanggalProspek
+      const month = new Date(dateForGrouping).toLocaleDateString('id-ID', { month: 'long' })
+      const year = new Date(dateForGrouping).getFullYear()
       const kodeAds = (kodeAdsMap.get(prospek.kodeAdsId!) as string) || 'Unknown'
       const sumberLeads = (sumberLeadsMap.get(prospek.sumberLeadsId!) as string) || 'Unknown'
       const key = `${month}-${year}-${kodeAds}-${sumberLeads}`
@@ -169,11 +160,15 @@ export async function GET(request: NextRequest) {
 
       const data = monthlyDataMap.get(key)!
 
-      // Count prospects
-      data.prospek += 1
+      // Count prospects by tanggalProspek (exists and inside range when range set)
+      const prospekDate = prospek.tanggalProspek
+      const inProspekRange = prospekDate && (!rangeStart || (new Date(prospekDate) >= rangeStart && new Date(prospekDate) < rangeEnd))
+      if (inProspekRange) data.prospek += 1
 
-      // Count leads
-      data.leads += 1
+      // Count leads by tanggalJadiLeads
+      const leadDate = prospek.tanggalJadiLeads
+      const inLeadRange = leadDate && (!rangeStart || (new Date(leadDate) >= rangeStart && new Date(leadDate) < rangeEnd))
+      if (inLeadRange) data.leads += 1
 
       // Count customers and sum transaction values
       if (prospek.konversi_customer.length > 0) {
@@ -201,12 +196,9 @@ export async function GET(request: NextRequest) {
     // Get budget data from ads_budget table - ambil semua periode jika bypassDateFilter
     const budgetData = await prisma.adsBudget.findMany({
       where: bypassDateFilter ? {} : {
-        // Untuk periode tertentu, ambil berdasarkan tanggal filter
-        periode: leadsDateFilter.tanggalJadiLeads ? (() => {
-          const startDate = leadsDateFilter.tanggalJadiLeads.gte
-          const periode = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, '0')}`
-          return periode
-        })() : undefined
+        // For a period-specific query, use the computed rangeStart (we use the
+        // month of rangeStart as the periode value in format YYYY-MM)
+        periode: rangeStart ? `${rangeStart.getFullYear()}-${String(rangeStart.getMonth() + 1).padStart(2, '0')}` : undefined
       }
     })
 
